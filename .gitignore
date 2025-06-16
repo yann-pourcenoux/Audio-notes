@@ -1,8 +1,5 @@
-# Ignore all files in the .taskmaster directory
-.taskmaster/
-
 # Ignore all files in the .cursor directory
-.cursor/
+.cursor/mcp.json
 
 # Ignore all files in the .roo directory
 .roo/
