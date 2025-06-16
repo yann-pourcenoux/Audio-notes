@@ -1,0 +1,11 @@
+# Task ID: 7
+# Title: Integrate Ollama LLM for Text Enhancement
+# Status: pending
+# Dependencies: 4
+# Priority: medium
+# Description: Integrate an LLM via Ollama for enhancing transcribed text.
+# Details:
+Set up a local Ollama server and use its API to enhance transcriptions. Implement optional features like summarization, cleanup, and tag suggestion. Ensure the integration is optional and can be toggled via CLI options.
+
+# Test Strategy:
+Test the enhancement process by comparing enhanced text with original transcriptions and verifying improvements in clarity and structure.

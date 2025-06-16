@@ -1,0 +1,330 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Setup Project Repository",
+        "description": "Initialize the project repository with version control and basic structure.",
+        "details": "Create a new Git repository for the project. Set up the initial directory structure with folders for scripts, tests, and documentation. Initialize a README file and a .gitignore file to exclude unnecessary files from version control. Use GitHub or GitLab for remote repository hosting.",
+        "testStrategy": "Verify that the repository is accessible and the initial structure is correctly set up by cloning it to a different location.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 2,
+        "title": "Configure Python Environment with uv",
+        "description": "Set up the Python environment using uv for dependency management.",
+        "details": "Install uv and create a new Python environment. Define the dependencies in a uv-compatible format, including Python 3.12+, HuggingFace Transformers, and any other necessary libraries. Generate a lockfile to ensure reproducibility.\n<info added on 2025-06-16T19:00:42.688Z>\nResearch and implement the latest best practices for setting up a Python environment with the `uv` package manager, focusing on pyproject.toml configuration, virtual environment creation, and dependency management for AI/ML projects using HuggingFace Transformers. Ensure the setup includes:\n\n1. Installation of `uv` and creation of a virtual environment using `uv init`.\n2. Configuration of `pyproject.toml` with project metadata and dependencies, including Python 3.12+, HuggingFace Transformers, torch, numpy, and pandas.\n3. Management of dependencies using `uv install` and generation of a lockfile for reproducibility.\n4. Utilization of `uv sync` to maintain consistent environments across different setups.\n5. Implementation of best practices such as version pinning, environment variable management, GPU support considerations, regular testing, and comprehensive documentation.\n6. Troubleshooting strategies for dependency conflicts, platform-specific issues, and performance optimizations.\n</info added on 2025-06-16T19:00:42.688Z>\n<info added on 2025-06-16T20:54:20.038Z>\nThe Python environment has been successfully configured using `uv` version 0.6.12, following best practices for AI/ML projects. The project structure adheres to modern Python packaging standards, utilizing the `src` layout with the `audio_notes` package located in `src/audio_notes/`. The `pyproject.toml` file has been meticulously configured to include all necessary dependencies, ensuring a robust and reproducible environment.\n\nTo maintain consistency across different setups, the `uv.lock` file has been generated, locking the exact versions of all dependencies. This lockfile ensures that the environment remains consistent, preventing potential issues related to dependency updates. Additionally, the `audio-notes` command-line interface (CLI) has been successfully created, providing a user-friendly entry point for the application.\n\nAll core dependencies, including HuggingFace Transformers, torch, torchaudio, librosa, soundfile, pandas, and numpy, have been verified and are functioning correctly. The environment has been thoroughly tested, confirming that all key libraries import successfully and that the CLI application runs as expected. The package metadata, including version 0.1.0 and a proper description, is accessible and correctly configured.\n\nWhile CUDA support is included in the PyTorch installation, it is important to note that the current system does not have GPU capabilities, and the environment is operating in a CPU-only mode. This setup ensures that the application remains functional and efficient, even without GPU resources.\n</info added on 2025-06-16T20:54:20.038Z>",
+        "testStrategy": "Run uv to install dependencies and verify that all packages are correctly installed and the environment is activated.",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 3,
+        "title": "Implement Audio File Loader and Format Normalizer",
+        "description": "Develop a module to load and normalize audio files for transcription, optimized for OpenAI's Whisper Large-v3 model.",
+        "status": "pending",
+        "dependencies": [
+          2
+        ],
+        "priority": "high",
+        "details": "Utilize Python libraries like librosa to process audio files in formats such as WAV, MP3, M4A, and FLAC. The module should:\n\n- Resample audio to a 16 kHz sampling rate, as Whisper Large-v3 expects this rate for optimal performance. ([comet.arts.ubc.ca](https://comet.arts.ubc.ca/docs/4_Advanced/advanced_transcription/advanced_transcription_whisper.html?utm_source=openai))\n- Convert audio to mono channel, since Whisper requires single-channel input. ([dataloop.ai](https://dataloop.ai/library/model/openai_whisper-large-v3/?utm_source=openai))\n- Normalize audio amplitude to prevent clipping while maintaining signal quality.\n- Handle 128 Mel frequency bins, aligning with Whisper Large-v3's specifications. ([github.com](https://github.com/zzc0208/Whisper-vits-svc-LargeV3/blob/MiX3/README.md?utm_source=openai))\n- Prepare audio in a numpy array format compatible with the HuggingFace Transformers pipeline.\n- Support both short audio clips and long-form audio, considering Whisper's 30-second receptive field. ([huggingface.co](https://huggingface.co/openai/whisper-large-v3?utm_source=openai))\n\nThe implementation should ensure compatibility with the HuggingFace Transformers pipeline's expected input format, facilitating seamless integration with Whisper Large-v3 for transcription tasks.",
+        "testStrategy": "Test the module with audio files of different formats and lengths, verifying that the output is consistent, normalized, and ready for transcription with Whisper Large-v3.",
+        "subtasks": [
+          {
+            "id": 3.1,
+            "title": "Implement Audio Resampling to 16 kHz",
+            "description": "Use librosa to resample audio files to a 16 kHz sampling rate, as required by Whisper Large-v3 for optimal performance. ([comet.arts.ubc.ca](https://comet.arts.ubc.ca/docs/4_Advanced/advanced_transcription/advanced_transcription_whisper.html?utm_source=openai))",
+            "status": "done"
+          },
+          {
+            "id": 3.2,
+            "title": "Convert Audio to Mono Channel",
+            "description": "Ensure that all audio files are converted to mono channel, aligning with Whisper's requirement for single-channel input. ([dataloop.ai](https://dataloop.ai/library/model/openai_whisper-large-v3/?utm_source=openai))",
+            "status": "done"
+          },
+          {
+            "id": 3.3,
+            "title": "Normalize Audio Amplitude",
+            "description": "Implement normalization of audio amplitude to prevent clipping while maintaining signal quality, ensuring compatibility with Whisper Large-v3. ([github.com](https://github.com/zzc0208/Whisper-vits-svc-LargeV3/blob/MiX3/README.md?utm_source=openai))",
+            "status": "done"
+          },
+          {
+            "id": 3.4,
+            "title": "Handle 128 Mel Frequency Bins",
+            "description": "Adjust audio processing to handle 128 Mel frequency bins, as specified by Whisper Large-v3, to capture detailed audio features. ([github.com](https://github.com/zzc0208/Whisper-vits-svc-LargeV3/blob/MiX3/README.md?utm_source=openai))",
+            "status": "done"
+          },
+          {
+            "id": 3.5,
+            "title": "Prepare Audio in Numpy Array Format",
+            "description": "Ensure that the processed audio is outputted in a numpy array format compatible with the HuggingFace Transformers pipeline, facilitating seamless integration with Whisper Large-v3. ([huggingface.co](https://huggingface.co/openai/whisper-large-v3?utm_source=openai))",
+            "status": "done"
+          },
+          {
+            "id": 3.6,
+            "title": "Support Long-Form Audio Processing",
+            "description": "Implement functionality to handle both short audio clips and long-form audio, considering Whisper's 30-second receptive field, to accommodate various transcription scenarios. ([huggingface.co](https://huggingface.co/openai/whisper-large-v3?utm_source=openai))",
+            "status": "done"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Integrate HuggingFace Model for Transcription",
+        "description": "Integrate OpenAI's Whisper Large-v3 model from HuggingFace for transcribing audio files.",
+        "status": "pending",
+        "dependencies": [
+          3
+        ],
+        "priority": "high",
+        "details": "Utilize the HuggingFace Transformers library to load OpenAI's Whisper Large-v3 model. Implement a function to transcribe normalized audio files into text, ensuring compatibility with the audio format produced by the loader. The Whisper Large-v3 model offers several enhancements over its predecessors, including:\n\n- Support for 99 languages with improved performance (10-20% error reduction compared to large-v2).\n- Utilization of 128 Mel frequency bins, allowing for more detailed audio representation.\n- Inclusion of Cantonese support.\n- Compatibility with the HuggingFace Transformers pipeline for seamless integration.\n- Capability to handle both transcription and translation tasks.\n- Support for timestamp generation at both sentence and word levels.\n- Ability to process long-form audio files exceeding 30 seconds using a chunked approach.\n- Support for batch processing of multiple audio files.\n\nImplementation should leverage the HuggingFace Transformers pipeline approach for simplicity, with options for:\n\n- Automatic language detection or manual language specification.\n- Temperature fallback and other decoding strategies.\n- Timestamp generation for structured output.\n- Batch processing capabilities.\n\nThe model requires the following packages, which are already installed in our environment:\n\n- transformers\n- torch\n- datasets[audio]",
+        "testStrategy": "Validate the transcription accuracy by comparing the output text with known transcripts of test audio files. Additionally, assess the model's performance in handling long-form audio files and batch processing to ensure robustness and efficiency.",
+        "subtasks": [
+          {
+            "id": 4.1,
+            "title": "Load Whisper Large-v3 Model",
+            "status": "done",
+            "description": "Successfully loaded OpenAI's Whisper Large-v3 model using the HuggingFace Transformers library."
+          },
+          {
+            "id": 4.2,
+            "title": "Implement Transcription Function",
+            "status": "done",
+            "description": "Developed a function to transcribe normalized audio files into text using the Whisper Large-v3 model."
+          },
+          {
+            "id": 4.3,
+            "title": "Ensure Audio Format Compatibility",
+            "status": "done",
+            "description": "Verified that the transcription function is compatible with the audio format produced by the loader."
+          },
+          {
+            "id": 4.4,
+            "title": "Implement Automatic Language Detection",
+            "status": "pending",
+            "description": "Add functionality to automatically detect the language of the input audio for transcription."
+          },
+          {
+            "id": 4.5,
+            "title": "Implement Manual Language Specification",
+            "status": "pending",
+            "description": "Add functionality to allow manual specification of the language for transcription."
+          },
+          {
+            "id": 4.6,
+            "title": "Implement Decoding Strategies",
+            "status": "pending",
+            "description": "Integrate temperature fallback and other decoding strategies to enhance transcription accuracy."
+          },
+          {
+            "id": 4.7,
+            "title": "Implement Timestamp Generation",
+            "status": "pending",
+            "description": "Enable generation of sentence-level and word-level timestamps in the transcription output."
+          },
+          {
+            "id": 4.8,
+            "title": "Implement Chunked Long-Form Audio Processing",
+            "status": "pending",
+            "description": "Develop functionality to process long-form audio files exceeding 30 seconds using a chunked approach."
+          },
+          {
+            "id": 4.9,
+            "title": "Implement Batch Processing of Multiple Audio Files",
+            "status": "pending",
+            "description": "Add support for batch processing of multiple audio files to improve efficiency."
+          },
+          {
+            "id": 4.1,
+            "title": "Test Transcription Accuracy",
+            "status": "pending",
+            "description": "Validate the transcription accuracy by comparing the output text with known transcripts of test audio files."
+          },
+          {
+            "id": 4.11,
+            "title": "Test Long-Form Audio Processing",
+            "status": "pending",
+            "description": "Assess the model's performance in handling long-form audio files to ensure robustness."
+          },
+          {
+            "id": 4.12,
+            "title": "Test Batch Processing Efficiency",
+            "status": "pending",
+            "description": "Evaluate the efficiency of batch processing multiple audio files to ensure scalability."
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Implement Obsidian Markdown Writer",
+        "description": "Develop a module to write transcriptions as Markdown notes in an Obsidian vault.",
+        "details": "Implement file I/O operations to create or append Markdown files in the specified Obsidian vault. Use Python's built-in file handling capabilities to manage note titling, tagging, and folder organization. Ensure proper error handling for file access issues.",
+        "testStrategy": "Test writing operations by creating and appending notes in a test Obsidian vault and verifying the content and structure.",
+        "priority": "high",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Develop CLI Interface",
+        "description": "Create a command-line interface for the tool using the Click library, incorporating OpenAI's Whisper Large-v3 model capabilities.",
+        "status": "pending",
+        "dependencies": [
+          5
+        ],
+        "priority": "medium",
+        "details": "Utilize the Click library to develop a user-friendly CLI that leverages Whisper Large-v3's features. Implement options for language specification (manual or automatic detection from 99 supported languages), task selection (transcription vs. translation to English), timestamp options (none, sentence-level, or word-level timestamps), model precision options (float16 for GPU, float32 for CPU), batch processing for multiple files, temperature and decoding strategy parameters, long-form audio processing options (sequential vs. chunked), and output format options (plain text, JSON with timestamps, etc.). Ensure the CLI is intuitive for basic use cases while exposing the full power of Whisper Large-v3.",
+        "testStrategy": "Test the CLI with various command inputs to verify correct processing of audio files, accurate language detection, proper task execution (transcription or translation), correct timestamp generation, appropriate model precision selection, efficient batch processing, accurate application of temperature and decoding strategies, correct handling of long-form audio processing, and accurate output formatting. Ensure the CLI updates the Obsidian vault as intended.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement Language Specification Options",
+            "description": "Add CLI options to specify the language of the input audio, supporting manual selection or automatic detection from 99 supported languages.",
+            "status": "pending"
+          },
+          {
+            "id": 2,
+            "title": "Implement Task Selection Options",
+            "description": "Add CLI options to select the task: transcription or translation to English.",
+            "status": "pending"
+          },
+          {
+            "id": 3,
+            "title": "Implement Timestamp Options",
+            "description": "Add CLI options to specify timestamp generation: none, sentence-level, or word-level timestamps.",
+            "status": "pending"
+          },
+          {
+            "id": 4,
+            "title": "Implement Model Precision Options",
+            "description": "Add CLI options to select model precision: float16 for GPU or float32 for CPU.",
+            "status": "pending"
+          },
+          {
+            "id": 5,
+            "title": "Implement Batch Processing Options",
+            "description": "Add CLI options to process multiple audio files in batch mode.",
+            "status": "pending"
+          },
+          {
+            "id": 6,
+            "title": "Implement Temperature and Decoding Strategy Parameters",
+            "description": "Add CLI options to configure temperature and decoding strategy parameters for transcription.",
+            "status": "pending"
+          },
+          {
+            "id": 7,
+            "title": "Implement Long-Form Audio Processing Options",
+            "description": "Add CLI options to handle long-form audio processing using sequential or chunked methods.",
+            "status": "pending"
+          },
+          {
+            "id": 8,
+            "title": "Implement Output Format Options",
+            "description": "Add CLI options to specify output formats: plain text, JSON with timestamps, etc.",
+            "status": "pending"
+          },
+          {
+            "id": 9,
+            "title": "Integrate CLI with Obsidian Vault",
+            "description": "Ensure the CLI updates the Obsidian vault with transcriptions or translations as intended.",
+            "status": "pending"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Integrate Ollama LLM for Text Enhancement",
+        "description": "Integrate an LLM via Ollama for enhancing transcribed text.",
+        "details": "Set up a local Ollama server and use its API to enhance transcriptions. Implement optional features like summarization, cleanup, and tag suggestion. Ensure the integration is optional and can be toggled via CLI options.",
+        "testStrategy": "Test the enhancement process by comparing enhanced text with original transcriptions and verifying improvements in clarity and structure.",
+        "priority": "medium",
+        "dependencies": [
+          4
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 8,
+        "title": "Implement Error Handling and Logging",
+        "description": "Add comprehensive error handling and logging throughout the application.",
+        "details": "Use Python's logging module to implement logging at various levels (info, warning, error). Add try-except blocks to handle potential errors in file I/O, API calls, and other operations. Ensure logs are informative and help in debugging issues.",
+        "testStrategy": "Induce errors in a controlled environment and verify that they are logged correctly and that the application handles them gracefully.",
+        "priority": "medium",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 9,
+        "title": "Test End-to-End Workflow",
+        "description": "Conduct an end-to-end test of the entire transcription and note integration process.",
+        "details": "Run the complete workflow from audio file input to note creation in Obsidian. Test with different audio formats and note configurations. Verify that each component interacts correctly and the final output meets user expectations.",
+        "testStrategy": "Perform user acceptance testing with sample audio files and ensure the output in Obsidian is accurate and well-structured.",
+        "priority": "high",
+        "dependencies": [
+          8
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 10,
+        "title": "Document Setup and Usage Instructions",
+        "description": "Create comprehensive documentation for setting up and using the tool.",
+        "details": "Write detailed instructions for installing dependencies, configuring the environment, and using the CLI tool. Include troubleshooting tips and FAQs. Use Markdown for documentation and host it in the project repository.",
+        "testStrategy": "Review the documentation for clarity and completeness. Have a new user follow the instructions to set up and use the tool successfully.",
+        "priority": "medium",
+        "dependencies": [
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 11,
+        "title": "Implement Batch Processing Feature",
+        "description": "Add functionality to process multiple audio files in a batch.",
+        "details": "Extend the CLI to accept a directory of audio files and process them sequentially. Ensure that each file is transcribed and integrated into Obsidian as a separate note. Optimize performance for handling large batches.",
+        "testStrategy": "Test batch processing with a directory of audio files and verify that each file is processed correctly and efficiently.",
+        "priority": "low",
+        "dependencies": [
+          9
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 12,
+        "title": "Develop Config File for Persistent Settings",
+        "description": "Implement a configuration file to store persistent user settings.",
+        "details": "Use a format like JSON or YAML to store user preferences such as default vault path and model selection. Implement functionality to read from and write to this config file. Ensure the CLI can override config settings if needed.",
+        "testStrategy": "Test the config file by setting different preferences and verifying that they are applied correctly during tool execution.",
+        "priority": "low",
+        "dependencies": [
+          11
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "created": "2025-06-16T18:56:53.466Z",
+      "updated": "2025-06-16T20:54:30.338Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# Task ID: 12
+# Title: Develop Config File for Persistent Settings
+# Status: pending
+# Dependencies: 11
+# Priority: low
+# Description: Implement a configuration file to store persistent user settings.
+# Details:
+Use a format like JSON or YAML to store user preferences such as default vault path and model selection. Implement functionality to read from and write to this config file. Ensure the CLI can override config settings if needed.
+
+# Test Strategy:
+Test the config file by setting different preferences and verifying that they are applied correctly during tool execution.

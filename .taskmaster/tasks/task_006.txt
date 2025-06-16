@@ -1,0 +1,11 @@
+# Task ID: 6
+# Title: Develop CLI Interface
+# Status: pending
+# Dependencies: 5
+# Priority: medium
+# Description: Create a command-line interface for the tool using argparse or Typer.
+# Details:
+Use the Typer library to create a user-friendly CLI. Define commands for processing single or multiple audio files, specifying the Obsidian vault path, and configuring options like model selection. Implement clear prompts and error messages.
+
+# Test Strategy:
+Test the CLI with various command inputs and verify that it correctly processes audio files and updates the Obsidian vault.

@@ -1,0 +1,91 @@
+<context>
+# Overview  
+This project is a lightweight Python tool that transcribes audio notes and integrates the resulting text into Obsidian notes. It is designed for users who want to quickly convert spoken thoughts into organized, searchable notes within their Obsidian knowledge base. The tool leverages state-of-the-art open-source models for transcription and LLM-powered note enhancement, providing a seamless workflow for knowledge capture and organization.
+
+# Core Features  
+- **Audio Transcription**: Converts audio files (e.g., WAV, MP3, M4A) to text using a HuggingFace speech-to-text model (e.g., OpenAI Whisper or similar).
+  - Enables fast, accurate transcription of voice notes.
+  - Supports multiple audio formats.
+- **Obsidian Integration**: Automatically appends or creates new notes in a user-specified Obsidian vault.
+  - Ensures transcribed notes are instantly available in the user's knowledge base.
+  - Supports note titling, tagging, and folder organization.
+- **LLM-Powered Enhancement**: Uses an LLM (run via Ollama) to summarize, clean up, or structure the transcribed text before saving to Obsidian.
+  - Improves clarity and usefulness of notes.
+  - Optional: Suggests tags or links to existing notes.
+- **CLI Tooling**: Simple command-line interface for batch or single-file processing.
+  - Easy to use for both technical and non-technical users.
+- **Python Package Management with uv**: All dependencies managed via `uv` for fast, reproducible installs.
+
+# User Experience  
+- **User Personas**: Knowledge workers, students, researchers, and anyone who uses Obsidian for note-taking.
+- **Key User Flows**:
+  1. User records an audio note on their device.
+  2. User runs the CLI tool, specifying the audio file and Obsidian vault location.
+  3. Tool transcribes the audio, enhances the text with an LLM, and saves it as a new or appended note in Obsidian.
+- **UI/UX Considerations**:
+  - Minimal, clear CLI prompts.
+  - Configurable defaults (e.g., default vault path, model selection).
+  - Error messages for missing dependencies or failed transcriptions.
+</context>
+<PRD>
+# Technical Architecture  
+- **System Components**:
+  - Audio file loader and format normalizer
+  - HuggingFace speech-to-text model wrapper
+  - Ollama LLM client for text enhancement
+  - Obsidian vault file writer (Markdown)
+  - CLI interface (argparse or Typer)
+- **Data Models**:
+  - AudioNote: {path, duration, transcription, metadata}
+  - Note: {title, content, tags, vault_path}
+- **APIs and Integrations**:
+  - HuggingFace Transformers or SpeechRecognition API
+  - Ollama local API for LLM calls
+  - File system access for Obsidian vault
+- **Infrastructure Requirements**:
+  - Python 3.12+
+  - `uv` for dependency management
+  - Local Ollama server running
+  - Sufficient disk space for audio and note files
+
+# Development Roadmap  
+- **MVP Requirements**:
+  1. CLI tool to accept audio file and vault path
+  2. Audio transcription using HuggingFace model
+  3. Save raw transcription as Markdown note in Obsidian vault
+  4. Optional: Enhance transcription with LLM via Ollama
+  5. Basic error handling and logging
+  6. `uv`-based project setup and dependency management
+- **Future Enhancements**:
+  - Batch processing of multiple audio files
+  - Config file for persistent settings
+  - GUI wrapper
+  - Advanced LLM features (tag suggestion, note linking)
+  - Cloud sync or mobile integration
+
+# Logical Dependency Chain
+- Set up Python project with `uv`
+- Implement audio file loader and format normalizer
+- Integrate HuggingFace model for transcription
+- Implement Obsidian Markdown writer
+- Add CLI interface
+- Integrate Ollama LLM for text enhancement (optional for MVP)
+- Add error handling and logging
+- Test end-to-end workflow
+
+# Risks and Mitigations  
+- **Technical challenges**: Model compatibility, audio format support
+  - Mitigation: Use well-supported HuggingFace models and libraries
+- **Ollama/LLM integration**: Local server setup may be a barrier
+  - Mitigation: Provide clear setup instructions, make LLM step optional
+- **Obsidian vault file access**: User permissions or path errors
+  - Mitigation: Validate paths and handle errors gracefully
+- **Dependency management**: Ensuring reproducibility with `uv`
+  - Mitigation: Document setup and provide lockfile
+
+# Appendix  
+- HuggingFace model: Whisper (or similar)
+- Ollama: https://ollama.com/
+- uv: https://github.com/astral-sh/uv
+- Obsidian: https://obsidian.md/
+</PRD>
