@@ -109,40 +109,40 @@
             "id": 4.4,
             "title": "Implement Automatic Language Detection",
             "status": "pending",
-            "description": "Add functionality to automatically detect the language of the input audio for transcription."
+            "description": "Add functionality to automatically detect the language of the input audio for transcription. Utilize the Whisper model's built-in language detection capabilities to identify the language of the audio input. This can be achieved by using the model's `detect_language` method, which analyzes the audio features to determine the language. ([discuss.huggingface.co](https://discuss.huggingface.co/t/language-detection-with-whisper/26003/1?utm_source=openai))"
           },
           {
             "id": 4.5,
             "title": "Implement Manual Language Specification",
             "status": "pending",
-            "description": "Add functionality to allow manual specification of the language for transcription."
+            "description": "Add functionality to allow manual specification of the language for transcription. This feature will enable users to specify the language of the audio input, which can be particularly useful when the automatic detection is uncertain or when processing audio in multiple languages."
           },
           {
             "id": 4.6,
             "title": "Implement Decoding Strategies",
             "status": "pending",
-            "description": "Integrate temperature fallback and other decoding strategies to enhance transcription accuracy."
+            "description": "Integrate temperature fallback and other decoding strategies to enhance transcription accuracy. Implementing decoding strategies such as temperature sampling can help in generating more diverse and accurate transcriptions. Adjusting the temperature parameter can control the randomness of the predictions, allowing for a balance between accuracy and diversity in the transcribed text."
           },
           {
             "id": 4.7,
             "title": "Implement Timestamp Generation",
             "status": "pending",
-            "description": "Enable generation of sentence-level and word-level timestamps in the transcription output."
+            "description": "Enable generation of sentence-level and word-level timestamps in the transcription output. This feature will provide detailed timing information for each segment of the transcribed text, which can be useful for applications such as subtitling, audio indexing, and content analysis."
           },
           {
             "id": 4.8,
             "title": "Implement Chunked Long-Form Audio Processing",
             "status": "pending",
-            "description": "Develop functionality to process long-form audio files exceeding 30 seconds using a chunked approach."
+            "description": "Develop functionality to process long-form audio files exceeding 30 seconds using a chunked approach. Utilize the Whisper model's chunked processing capabilities to handle long audio inputs efficiently. This approach involves dividing the audio into smaller segments and processing them sequentially, which can significantly reduce processing time compared to traditional methods. ([huggingface.co](https://huggingface.co/reach-vb/whisper-large-v3?utm_source=openai))"
           },
           {
             "id": 4.9,
             "title": "Implement Batch Processing of Multiple Audio Files",
             "status": "pending",
-            "description": "Add support for batch processing of multiple audio files to improve efficiency."
+            "description": "Add support for batch processing of multiple audio files to improve efficiency. Implementing batch processing will allow the system to handle multiple audio files simultaneously, reducing the overall processing time and improving throughput. This can be achieved by utilizing the batch processing capabilities of the Whisper model and optimizing the pipeline for parallel processing."
           },
           {
-            "id": 4.1,
+            "id": 4.10,
             "title": "Test Transcription Accuracy",
             "status": "pending",
             "description": "Validate the transcription accuracy by comparing the output text with known transcripts of test audio files."
@@ -151,109 +151,195 @@
             "id": 4.11,
             "title": "Test Long-Form Audio Processing",
             "status": "pending",
-            "description": "Assess the model's performance in handling long-form audio files to ensure robustness."
+            "description": "Assess the model's performance in handling long-form audio files to ensure robustness. This will involve testing the chunked processing approach with extended audio inputs to verify that the system can handle longer durations without degradation in performance or accuracy."
           },
           {
             "id": 4.12,
             "title": "Test Batch Processing Efficiency",
             "status": "pending",
-            "description": "Evaluate the efficiency of batch processing multiple audio files to ensure scalability."
+            "description": "Evaluate the efficiency of batch processing multiple audio files to ensure scalability. This will involve processing a large number of audio files in parallel and measuring the time taken to complete the task, ensuring that the system can scale effectively to handle increased workloads."
           }
         ]
       },
       {
         "id": 5,
         "title": "Implement Obsidian Markdown Writer",
-        "description": "Develop a module to write transcriptions as Markdown notes in an Obsidian vault.",
-        "details": "Implement file I/O operations to create or append Markdown files in the specified Obsidian vault. Use Python's built-in file handling capabilities to manage note titling, tagging, and folder organization. Ensure proper error handling for file access issues.",
-        "testStrategy": "Test writing operations by creating and appending notes in a test Obsidian vault and verifying the content and structure.",
-        "priority": "high",
+        "description": "Develop a module to write transcriptions as Markdown notes in an Obsidian vault, integrating Qwen 3:32B via Ollama for intelligent content enhancement.",
+        "status": "pending",
         "dependencies": [
           4
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "Implement file I/O operations to create or append Markdown files in the specified Obsidian vault. Utilize Python's built-in file handling capabilities to manage note titling, tagging, and folder organization. Integrate Qwen 3:32B via Ollama to enhance content structuring, title generation, tagging, summarization, and link suggestions. Ensure proper error handling for file access issues and manage local LLM processing resources effectively.",
+        "testStrategy": "Test writing operations by creating and appending notes in a test Obsidian vault and verifying the content and structure. Validate the integration of Qwen 3:32B by assessing the quality of content enhancement, including intelligent structuring, title generation, tagging, summarization, and link suggestions. Ensure that the local LLM processing meets performance and resource utilization expectations.",
+        "subtasks": [
+          {
+            "id": 5.1,
+            "title": "Set Up Local Environment for Qwen 3:32B via Ollama",
+            "description": "Install and configure Ollama to run Qwen 3:32B locally, ensuring all necessary dependencies and resources are in place for optimal performance.",
+            "status": "pending"
+          },
+          {
+            "id": 5.2,
+            "title": "Integrate Qwen 3:32B with Obsidian Markdown Writer",
+            "description": "Develop the integration between Qwen 3:32B and the Obsidian Markdown Writer module to enable intelligent content enhancement features such as content structuring, title generation, tagging, summarization, and link suggestions.",
+            "status": "pending"
+          },
+          {
+            "id": 5.3,
+            "title": "Implement File I/O Operations for Obsidian Vault",
+            "description": "Implement file I/O operations to create or append Markdown files in the specified Obsidian vault, managing note titling, tagging, and folder organization using Python's built-in file handling capabilities.",
+            "status": "pending"
+          },
+          {
+            "id": 5.4,
+            "title": "Ensure Proper Error Handling and Resource Management",
+            "description": "Implement error handling for file access issues and manage local LLM processing resources effectively to ensure smooth operation of the Obsidian Markdown Writer with Qwen 3:32B integration.",
+            "status": "pending"
+          },
+          {
+            "id": 5.5,
+            "title": "Test Writing Operations and Content Enhancement",
+            "description": "Test writing operations by creating and appending notes in a test Obsidian vault and verifying the content and structure. Validate the integration of Qwen 3:32B by assessing the quality of content enhancement, including intelligent structuring, title generation, tagging, summarization, and link suggestions. Ensure that the local LLM processing meets performance and resource utilization expectations.",
+            "status": "pending"
+          }
+        ]
       },
       {
         "id": 6,
         "title": "Develop CLI Interface",
-        "description": "Create a command-line interface for the tool using the Click library, incorporating OpenAI's Whisper Large-v3 model capabilities.",
+        "description": "Create a command-line interface for the tool using the Click library, integrating OpenAI's Whisper Large-v3 model for transcription and Qwen 3:32B via Ollama for intelligent CLI features, ensuring a seamless local AI pipeline without external API dependencies.",
         "status": "pending",
         "dependencies": [
           5
         ],
         "priority": "medium",
-        "details": "Utilize the Click library to develop a user-friendly CLI that leverages Whisper Large-v3's features. Implement options for language specification (manual or automatic detection from 99 supported languages), task selection (transcription vs. translation to English), timestamp options (none, sentence-level, or word-level timestamps), model precision options (float16 for GPU, float32 for CPU), batch processing for multiple files, temperature and decoding strategy parameters, long-form audio processing options (sequential vs. chunked), and output format options (plain text, JSON with timestamps, etc.). Ensure the CLI is intuitive for basic use cases while exposing the full power of Whisper Large-v3.",
-        "testStrategy": "Test the CLI with various command inputs to verify correct processing of audio files, accurate language detection, proper task execution (transcription or translation), correct timestamp generation, appropriate model precision selection, efficient batch processing, accurate application of temperature and decoding strategies, correct handling of long-form audio processing, and accurate output formatting. Ensure the CLI updates the Obsidian vault as intended.",
+        "details": "Utilize the Click library to develop a user-friendly CLI that leverages Whisper Large-v3's transcription capabilities and Qwen 3:32B's intelligent features. Implement options for language specification (manual or automatic detection from 119 supported languages), task selection (transcription vs. translation to English), timestamp options (none, sentence-level, or word-level timestamps), model precision options (float16 for GPU, float32 for CPU), batch processing for multiple files, temperature and decoding strategy parameters, long-form audio processing options (sequential vs. chunked), and output format options (plain text, JSON with timestamps, etc.). Incorporate LLM-enhanced CLI features such as intelligent file path suggestions, smart parameter recommendations, automatic language detection suggestions, content-aware output format recommendations, interactive help with context-aware suggestions, batch processing optimization suggestions, and enhanced error messages with intelligent troubleshooting suggestions. Ensure the CLI is intuitive for basic use cases while exposing the full power of Whisper Large-v3 and Qwen 3:32B, providing a complete local AI pipeline with no external API dependencies.",
+        "testStrategy": "Test the CLI with various command inputs to verify correct processing of audio files, accurate language detection, proper task execution (transcription or translation), correct timestamp generation, appropriate model precision selection, efficient batch processing, accurate application of temperature and decoding strategies, correct handling of long-form audio processing, and accurate output formatting. Ensure the CLI updates the Obsidian vault as intended. Validate the integration of Qwen 3:32B via Ollama for intelligent CLI features, including intelligent file path suggestions, smart parameter recommendations, automatic language detection suggestions, content-aware output format recommendations, interactive help with context-aware suggestions, batch processing optimization suggestions, and enhanced error messages with intelligent troubleshooting suggestions.",
         "subtasks": [
           {
-            "id": 1,
+            "id": 6.1,
             "title": "Implement Language Specification Options",
-            "description": "Add CLI options to specify the language of the input audio, supporting manual selection or automatic detection from 99 supported languages.",
+            "description": "Add CLI options to specify the language of the input audio, supporting manual selection or automatic detection from 119 supported languages.",
             "status": "pending"
           },
           {
-            "id": 2,
+            "id": 6.2,
             "title": "Implement Task Selection Options",
             "description": "Add CLI options to select the task: transcription or translation to English.",
             "status": "pending"
           },
           {
-            "id": 3,
+            "id": 6.3,
             "title": "Implement Timestamp Options",
             "description": "Add CLI options to specify timestamp generation: none, sentence-level, or word-level timestamps.",
             "status": "pending"
           },
           {
-            "id": 4,
+            "id": 6.4,
             "title": "Implement Model Precision Options",
             "description": "Add CLI options to select model precision: float16 for GPU or float32 for CPU.",
             "status": "pending"
           },
           {
-            "id": 5,
+            "id": 6.5,
             "title": "Implement Batch Processing Options",
             "description": "Add CLI options to process multiple audio files in batch mode.",
             "status": "pending"
           },
           {
-            "id": 6,
+            "id": 6.6,
             "title": "Implement Temperature and Decoding Strategy Parameters",
             "description": "Add CLI options to configure temperature and decoding strategy parameters for transcription.",
             "status": "pending"
           },
           {
-            "id": 7,
+            "id": 6.7,
             "title": "Implement Long-Form Audio Processing Options",
             "description": "Add CLI options to handle long-form audio processing using sequential or chunked methods.",
             "status": "pending"
           },
           {
-            "id": 8,
+            "id": 6.8,
             "title": "Implement Output Format Options",
             "description": "Add CLI options to specify output formats: plain text, JSON with timestamps, etc.",
             "status": "pending"
           },
           {
-            "id": 9,
+            "id": 6.9,
             "title": "Integrate CLI with Obsidian Vault",
             "description": "Ensure the CLI updates the Obsidian vault with transcriptions or translations as intended.",
+            "status": "pending"
+          },
+          {
+            "id": 6.10,
+            "title": "Integrate Qwen 3:32B via Ollama for Intelligent CLI Features",
+            "description": "Integrate Qwen 3:32B via Ollama to provide intelligent CLI features, including intelligent file path suggestions, smart parameter recommendations, automatic language detection suggestions, content-aware output format recommendations, interactive help with context-aware suggestions, batch processing optimization suggestions, and enhanced error messages with intelligent troubleshooting suggestions.",
             "status": "pending"
           }
         ]
       },
       {
         "id": 7,
-        "title": "Integrate Ollama LLM for Text Enhancement",
-        "description": "Integrate an LLM via Ollama for enhancing transcribed text.",
-        "details": "Set up a local Ollama server and use its API to enhance transcriptions. Implement optional features like summarization, cleanup, and tag suggestion. Ensure the integration is optional and can be toggled via CLI options.",
-        "testStrategy": "Test the enhancement process by comparing enhanced text with original transcriptions and verifying improvements in clarity and structure.",
-        "priority": "medium",
+        "title": "Integrate Qwen 3:32B via Ollama for Text Enhancement",
+        "description": "Integrate the Qwen 3:32B model through Ollama to enhance transcribed text, ensuring privacy and cost efficiency by processing data locally.",
+        "status": "pending",
         "dependencies": [
           4
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "medium",
+        "details": "Set up a local Ollama server to run the Qwen 3:32B model, enabling text enhancement features such as grammar correction, formatting improvement, content summarization, intelligent content categorization, and tagging. Ensure the integration is optional and can be toggled via CLI options. Support multilingual text enhancement, leveraging Qwen 3:32B's capabilities in over 119 languages. Implement error handling for local model availability and provide fallback options if the Ollama service is unavailable. Optimize prompt engineering to align with Qwen 3:32B's features and performance characteristics.",
+        "testStrategy": "Test the enhancement process by comparing enhanced text with original transcriptions, verifying improvements in clarity, structure, and accuracy. Evaluate the system's performance across different languages and ensure the integration can be toggled via CLI options. Test error handling mechanisms by simulating Ollama service unavailability and assessing fallback behavior.",
+        "subtasks": [
+          {
+            "id": 7.1,
+            "title": "Set Up Local Ollama Server with Qwen 3:32B Model",
+            "description": "Install and configure Ollama to run the Qwen 3:32B model locally, ensuring all dependencies are met and the model is accessible for text enhancement tasks.",
+            "status": "pending"
+          },
+          {
+            "id": 7.2,
+            "title": "Implement Text Enhancement Features",
+            "description": "Develop functionalities for grammar correction, formatting improvement, content summarization, intelligent content categorization, and tagging using the Qwen 3:32B model via Ollama.",
+            "status": "pending"
+          },
+          {
+            "id": 7.3,
+            "title": "Ensure Optional Integration and CLI Toggles",
+            "description": "Modify the application to allow optional integration of the Qwen 3:32B model, with the ability to enable or disable the feature through command-line interface options.",
+            "status": "pending"
+          },
+          {
+            "id": 7.4,
+            "title": "Support Multilingual Text Enhancement",
+            "description": "Leverage Qwen 3:32B's multilingual capabilities to process and enhance transcribed text in over 119 languages, ensuring accurate and contextually appropriate enhancements.",
+            "status": "pending"
+          },
+          {
+            "id": 7.5,
+            "title": "Implement Error Handling and Fallback Mechanisms",
+            "description": "Develop error handling procedures for scenarios where the Ollama service is unavailable, including fallback options to maintain application functionality.",
+            "status": "pending"
+          },
+          {
+            "id": 7.6,
+            "title": "Optimize Prompt Engineering for Qwen 3:32B",
+            "description": "Adjust prompt structures and inputs to align with Qwen 3:32B's performance characteristics, ensuring efficient and accurate text enhancement outputs.",
+            "status": "pending"
+          },
+          {
+            "id": 7.7,
+            "title": "Test Enhancement Process and CLI Integration",
+            "description": "Conduct tests comparing enhanced text with original transcriptions to verify improvements, and ensure the integration can be toggled via CLI options.",
+            "status": "pending"
+          },
+          {
+            "id": 7.8,
+            "title": "Test Error Handling and Fallback Mechanisms",
+            "description": "Simulate Ollama service unavailability to assess the application's response and verify the effectiveness of fallback mechanisms.",
+            "status": "pending"
+          }
+        ]
       },
       {
         "id": 8,
@@ -323,7 +409,7 @@
     ],
     "metadata": {
       "created": "2025-06-16T18:56:53.466Z",
-      "updated": "2025-06-16T21:09:09.901Z",
+      "updated": "2025-06-16T21:23:51.865Z",
       "description": "Tasks for master context"
     }
   }
