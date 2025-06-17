@@ -13,6 +13,7 @@ import os
 import sys
 import json
 import logging
+import torch
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime
@@ -245,9 +246,7 @@ def process(ctx, audio_files, language, task, timestamps, precision, temperature
         
         # Initialize transcriber
         transcriber = WhisperTranscriber(
-            model_size='large-v3',
-            compute_type=precision,
-            device='auto'
+            torch_dtype=torch.float32 if precision == 'float32' else torch.float16
         )
         
         # Initialize audio processor
@@ -326,9 +325,8 @@ def process_single_file(audio_file: str, transcriber: WhisperTranscriber,
     transcribe_options = {
         'task': task,
         'temperature': temperature,
-        'beam_size': beam_size,
         'word_timestamps': timestamps == 'word',
-        'condition_on_previous_text': processing_method == 'sequential'
+        'return_timestamps': timestamps != 'none'
     }
     
     if language != 'auto':
@@ -523,7 +521,7 @@ def quick_note(audio_file, vault_path):
     
     try:
         # Initialize components with defaults optimized for speed
-        transcriber = WhisperTranscriber(model_size='large-v3', compute_type='float32')
+        transcriber = WhisperTranscriber(torch_dtype=torch.float32)
         audio_processor = AudioProcessor()
         obsidian_writer = ObsidianWriter(vault_path=str(vault_path))
         

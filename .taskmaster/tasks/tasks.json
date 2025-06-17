@@ -363,15 +363,95 @@
       {
         "id": 9,
         "title": "Test End-to-End Workflow",
-        "description": "Conduct an end-to-end test of the entire transcription and note integration process.",
-        "details": "Run the complete workflow from audio file input to note creation in Obsidian. Test with different audio formats and note configurations. Verify that each component interacts correctly and the final output meets user expectations.",
-        "testStrategy": "Perform user acceptance testing with sample audio files and ensure the output in Obsidian is accurate and well-structured.",
-        "priority": "high",
+        "description": "Conduct an end-to-end test of the custom audio-notes CLI tool, ensuring seamless integration from audio input to enhanced note creation in Obsidian.",
+        "status": "in-progress",
         "dependencies": [
           8
         ],
-        "status": "in-progress",
-        "subtasks": []
+        "priority": "high",
+        "details": "Run the complete workflow using the custom CLI tool, starting from audio file input, through transcription with Whisper, content enhancement via Qwen integration through Ollama, and final note creation in Obsidian. Test with various audio formats and configurations to verify each component's functionality and the overall system's performance.",
+        "testStrategy": "Perform comprehensive testing by processing sample audio files through the CLI tool, ensuring accurate transcription, effective content enhancement, and correct note creation in Obsidian. Validate error handling and edge cases to ensure robustness.",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set Up Testing Environment",
+            "description": "Prepare the testing environment by installing necessary dependencies and configuring the system to support the custom audio-notes CLI tool.",
+            "dependencies": [],
+            "details": "Install required software packages, set up virtual environments, and configure system paths to ensure the CLI tool operates correctly. Ensure compatibility with various audio formats and system configurations.\n<info added on 2025-06-17T20:31:22.390Z>\nInitiate subtask 9.1 to establish the testing environment by:\n\n1. Confirming the installation and accessibility of the CLI tool.\n2. Ensuring all necessary dependencies are installed.\n3. Conducting basic functionality tests of the CLI tool.\n\nThis preparation will provide a solid foundation for comprehensive end-to-end testing.\n</info added on 2025-06-17T20:31:22.390Z>\n<info added on 2025-06-17T20:34:32.257Z>\nThe testing environment has been successfully established, confirming the readiness for comprehensive end-to-end testing.\n</info added on 2025-06-17T20:34:32.257Z>",
+            "status": "done",
+            "testStrategy": "Verify the environment setup by running a simple command through the CLI tool and confirming successful execution."
+          },
+          {
+            "id": 2,
+            "title": "Test Audio File Input",
+            "description": "Assess the CLI tool's ability to handle different audio file formats by importing and processing various audio files.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the CLI tool to process audio files in formats such as .mp3, .wav, and .ogg. Ensure the tool can read and process these files without errors.",
+            "status": "pending",
+            "testStrategy": "Confirm that all audio files are processed correctly by the CLI tool without errors or compatibility issues."
+          },
+          {
+            "id": 3,
+            "title": "Verify Whisper Transcription",
+            "description": "Evaluate the transcription accuracy of the Whisper model by converting audio files into text using the CLI tool.",
+            "dependencies": [
+              1
+            ],
+            "details": "Utilize the CLI tool to transcribe various audio files using Whisper. Review the transcriptions for accuracy, proper formatting, and correct punctuation.",
+            "status": "pending",
+            "testStrategy": "Compare transcribed text against original audio content to identify and correct any discrepancies."
+          },
+          {
+            "id": 4,
+            "title": "Test Qwen Integration via Ollama",
+            "description": "Assess the integration of Qwen through Ollama for content enhancement within the CLI tool.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the CLI tool to process transcribed text through Qwen via Ollama, enhancing the content as intended. Ensure the integration functions correctly and enhances the content appropriately.",
+            "status": "pending",
+            "testStrategy": "Review the enhanced content to confirm that Qwen integration via Ollama is functioning as expected."
+          },
+          {
+            "id": 5,
+            "title": "Verify Obsidian Vault Creation and Note Writing",
+            "description": "Test the CLI tool's ability to create an Obsidian vault and write notes based on processed audio files.",
+            "dependencies": [
+              1
+            ],
+            "details": "Use the CLI tool to create a new Obsidian vault and generate notes from processed audio files. Ensure that notes are correctly formatted and accessible within Obsidian.",
+            "status": "pending",
+            "testStrategy": "Open the generated notes in Obsidian to verify correct formatting and accessibility."
+          },
+          {
+            "id": 6,
+            "title": "Test Error Handling and Edge Cases",
+            "description": "Evaluate the CLI tool's robustness by testing error handling and edge cases during the workflow.",
+            "dependencies": [
+              1
+            ],
+            "details": "Deliberately introduce errors and edge cases, such as unsupported audio formats or corrupted files, to assess the CLI tool's error handling capabilities and stability.",
+            "status": "pending",
+            "testStrategy": "Confirm that the CLI tool handles errors gracefully and provides informative error messages without crashing."
+          },
+          {
+            "id": 7,
+            "title": "Verify Complete End-to-End Workflow",
+            "description": "Conduct a comprehensive test of the entire workflow, from audio input to enhanced note creation in Obsidian, using the CLI tool.",
+            "dependencies": [
+              2,
+              3,
+              4,
+              5,
+              6
+            ],
+            "details": "Run the complete workflow by processing an audio file through the CLI tool, ensuring each component functions correctly and the final output meets user expectations.",
+            "status": "pending",
+            "testStrategy": "Perform the end-to-end process multiple times with varying audio files and configurations to confirm consistent and reliable operation."
+          }
+        ]
       },
       {
         "id": 10,
@@ -415,7 +495,7 @@
     ],
     "metadata": {
       "created": "2025-06-16T18:56:53.466Z",
-      "updated": "2025-06-17T20:23:54.611Z",
+      "updated": "2025-06-17T20:34:38.893Z",
       "description": "Tasks for master context"
     }
   }
