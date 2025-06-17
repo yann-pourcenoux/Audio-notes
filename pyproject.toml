@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-audio-notes = "audio_notes.main:main"
+audio-notes = "audio_notes.cli:cli"
 
 [project.optional-dependencies]
 dev = [

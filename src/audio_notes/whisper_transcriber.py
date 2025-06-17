@@ -28,7 +28,7 @@ from transformers import (
 )
 from loguru import logger
 
-from audio_processor import AudioProcessor
+from .audio_processor import AudioProcessor
 
 # Suppress some transformers warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="transformers")
