@@ -346,7 +346,7 @@ def process_single_file(audio_file: str, transcriber: WhisperTranscriber,
     # Add to Obsidian vault if enabled
     if obsidian_writer and enhance_notes:
         try:
-            obsidian_writer.create_note(
+            note_path, note_title = obsidian_writer.create_note(
                 transcription=result['text'],
                 original_filename=audio_file,
                 metadata={
@@ -357,6 +357,8 @@ def process_single_file(audio_file: str, transcriber: WhisperTranscriber,
                     'model_precision': transcribe_options.get('compute_type', 'float32')
                 }
             )
+            if verbose:
+                click.echo(f"📝 Created Obsidian note: {note_path}")
         except Exception as e:
             logger.warning(f"Failed to create Obsidian note: {e}")
     
