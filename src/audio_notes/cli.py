@@ -279,7 +279,6 @@ def process(ctx, audio_files, language, task, timestamps, precision, temperature
                     task=task,
                     timestamps=timestamps,
                     temperature=temperature,
-                    beam_size=beam_size,
                     processing_method=processing_method,
                     output_format=output_format,
                     output_path=output_path,
@@ -314,7 +313,7 @@ def process(ctx, audio_files, language, task, timestamps, precision, temperature
 def process_single_file(audio_file: str, transcriber: WhisperTranscriber, 
                        audio_processor: AudioProcessor, obsidian_writer: Optional[ObsidianWriter],
                        language: str, task: str, timestamps: str, temperature: float,
-                       beam_size: int, processing_method: str, output_format: str,
+                       processing_method: str, output_format: str,
                        output_path: Path, enhance_notes: bool, verbose: bool) -> Dict:
     """Process a single audio file"""
     
@@ -349,7 +348,7 @@ def process_single_file(audio_file: str, transcriber: WhisperTranscriber,
         try:
             obsidian_writer.create_note(
                 transcription=result['text'],
-                audio_file_path=audio_file,
+                original_filename=audio_file,
                 metadata={
                     'language': result.get('language', 'unknown'),
                     'task': task,
@@ -532,14 +531,13 @@ def quick_note(audio_file, vault_path):
             audio_data,
             task='transcribe',
             temperature=0.0,
-            beam_size=1,  # Faster with single beam
             word_timestamps=False
         )
         
         # Create enhanced note
-        note_path = obsidian_writer.create_note(
+        note_path, note_title = obsidian_writer.create_note(
             transcription=result['text'],
-            audio_file_path=audio_file,
+            original_filename=audio_file,
             metadata={
                 'language': result.get('language', 'unknown'),
                 'quick_mode': True,

@@ -13,8 +13,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
-import requests
-from urllib.parse import quote
+import ollama
 
 logger = logging.getLogger(__name__)
 
@@ -22,17 +21,16 @@ logger = logging.getLogger(__name__)
 class OllamaClient:
     """Client for interacting with Ollama API to use Qwen 3:0.6B model."""
     
-    def __init__(self, base_url: str = "http://localhost:11434", model: str = "qwen3:0.6b"):
-        self.base_url = base_url
+    def __init__(self, model: str = "qwen3:0.6b"):
         self.model = model
-        self.api_url = f"{base_url}/api/generate"
         
     def is_available(self) -> bool:
         """Check if Ollama service is available."""
         try:
-            response = requests.get(f"{self.base_url}/api/tags", timeout=5)
-            return response.status_code == 200
-        except requests.RequestException:
+            # Try to list models to check if Ollama is running
+            models = ollama.list()
+            return True
+        except Exception:
             return False
     
     def generate_text(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> Optional[str]:
@@ -42,72 +40,152 @@ class OllamaClient:
             return None
             
         try:
-            payload = {
-                "model": self.model,
-                "prompt": prompt,
-                "stream": False,
-                "options": {
+            # Use more direct prompting to reduce thinking patterns
+            # Add clear instruction to be concise
+            direct_prompt = f"Answer concisely and directly. {prompt}"
+            
+            response = ollama.generate(
+                model=self.model,
+                prompt=direct_prompt,
+                options={
                     "temperature": temperature,
-                    "num_predict": max_tokens * 3  # Give more room for thinking + answer
-                },
-                "format": "",
-                "raw": False,
-                "keep_alive": "5m"
-            }
+                    "num_predict": max_tokens,
+                    "stop": ["</think>", "\n\n"]  # Stop at end of thinking or double newline
+                }
+            )
             
-            response = requests.post(self.api_url, json=payload, timeout=30)
-            response.raise_for_status()
+            raw_response = response.get("response", "").strip()
             
-            result = response.json()
-            raw_response = result.get("response", "").strip()
+            if not raw_response:
+                return None
+                
+            # Handle various response patterns
+            cleaned_response = self._extract_useful_content(raw_response)
             
-            # Parse response to extract final answer from thinking process
-            import re
+            if cleaned_response and len(cleaned_response.strip()) > 2:
+                return cleaned_response.strip()
             
-            # Look for quoted suggestions in the thinking process
-            quotes_match = re.findall(r'"([^"]+)"', raw_response)
-            if quotes_match:
-                # Filter out the original content and keep suggestions
-                suggestions = [q for q in quotes_match if not q.startswith("Hello") and len(q) < 100]
-                if suggestions:
-                    return max(suggestions, key=len).strip()
+            # If extraction failed, try fallback approach
+            return self._fallback_extraction(raw_response)
             
-            # Look for explicit suggestions like "Maybe X" or "Perhaps Y"
-            suggestion_patterns = [
-                r'(?:maybe|perhaps|could be|might be)\s+["\']?([^"\'\n.!?]+)["\']?',
-                r'(?:i suggest|i recommend|how about)\s+["\']?([^"\'\n.!?]+)["\']?',
-                r'(?:title could be|title should be|title would be)\s+["\']?([^"\'\n.!?]+)["\']?'
-            ]
-            
-            for pattern in suggestion_patterns:
-                match = re.search(pattern, raw_response, re.IGNORECASE)
-                if match:
-                    suggestion = match.group(1).strip()
-                    if len(suggestion) > 3 and len(suggestion) < 50:  # Reasonable title length
-                        return suggestion
-            
-            # Look for the last coherent phrase before the text cuts off
-            # Split by sentences and find the last complete thought
-            sentences = re.split(r'[.!?]+', raw_response)
-            for sentence in reversed(sentences):
-                sentence = sentence.strip()
-                # Look for title-like phrases
-                if (len(sentence) > 5 and len(sentence) < 50 and 
-                    not sentence.lower().startswith(('okay', 'let me', 'first', 'i need', 'i should', 'the user', 'maybe', 'wait'))):
-                    # Clean up any remaining artifacts
-                    clean_sentence = re.sub(r'^[^a-zA-Z]*', '', sentence)
-                    if clean_sentence:
-                        return clean_sentence.strip()
-            
-            # Final fallback - return raw response
-            return raw_response.strip()
-            
-        except requests.RequestException as e:
+        except Exception as e:
             logger.error(f"Error communicating with Ollama: {e}")
             return None
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing Ollama response: {e}")
+    
+    def _extract_useful_content(self, raw_response: str) -> Optional[str]:
+        """Extract useful content from Qwen's response, handling various patterns."""
+        
+        # Pattern 1: Complete <think>...</think> blocks
+        if '<think>' in raw_response and '</think>' in raw_response:
+            # Extract content after </think>
+            after_think = raw_response.split('</think>', 1)[-1].strip()
+            if after_think and len(after_think) > 3:
+                return self._clean_response_line(after_think)
+        
+        # Pattern 2: Incomplete <think> blocks (truncated responses)
+        if raw_response.startswith('<think>'):
+            # Look for quoted content within the thinking
+            quotes = re.findall(r'"([^"]{3,100})"', raw_response)
+            if quotes:
+                # Return the longest reasonable quote
+                best_quote = max(quotes, key=len) if quotes else None
+                if best_quote and len(best_quote) > 3:
+                    return best_quote.strip()
+            
+            # Look for title-like content after colons
+            title_patterns = [
+                r'title[:\s]+([^\n.]{5,50})',
+                r'answer[:\s]+([^\n.]{3,50})',
+                r'result[:\s]+([^\n.]{3,50})',
+                r'summary[:\s]+([^\n.]{10,100})',
+                r'tags?[:\s]+([^\n.]{5,80})'
+            ]
+            
+            for pattern in title_patterns:
+                match = re.search(pattern, raw_response, re.IGNORECASE)
+                if match:
+                    result = match.group(1).strip()
+                    if result and not result.lower().startswith(('the ', 'this ', 'that ', 'i ', 'let me')):
+                        return result
+            
+            # Look for any direct statements (not reasoning)
+            lines = raw_response.split('\n')
+            for line in lines:
+                line = line.strip()
+                # Skip reasoning phrases and look for direct answers
+                if (line and len(line) > 5 and 
+                    not any(phrase in line.lower() for phrase in [
+                        'let me', 'i need', 'the user', 'okay', 'hmm', 'so i',
+                        'i should', 'i think', 'maybe', 'perhaps', 'considering',
+                        'first', 'second', 'then', 'next', 'also', 'however'
+                    ])):
+                    
+                    # Look for lines that seem like answers
+                    if ('"' in line or 
+                        line.endswith('.') or line.endswith('!') or
+                        any(word in line.lower() for word in ['ai', 'ml', 'machine', 'learning', 'discussion', 'note'])):
+                        
+                        # Extract quoted content if present
+                        quote_match = re.search(r'"([^"]+)"', line)
+                        if quote_match:
+                            return quote_match.group(1).strip()
+                        
+                        # Or return the line if it looks like a direct answer
+                        cleaned = self._clean_response_line(line)
+                        if cleaned and len(cleaned) > 3:
+                            return cleaned
+        
+        # Pattern 3: Direct responses without thinking tags
+        else:
+            return self._clean_response_line(raw_response)
+        
+        return None
+    
+    def _clean_response_line(self, line: str) -> Optional[str]:
+        """Clean a response line to extract useful content."""
+        if not line:
             return None
+            
+        # Remove common prefixes
+        line = re.sub(r'^(answer[:\s]*|result[:\s]*|title[:\s]*)', '', line, flags=re.IGNORECASE)
+        
+        # Remove leading/trailing quotes and whitespace
+        line = line.strip().strip('"').strip("'").strip()
+        
+        # Remove invalid filename characters for titles
+        line = re.sub(r'[<>:"/\\|?*]', '', line)
+        
+        # Take first sentence if multiple
+        if '. ' in line:
+            line = line.split('. ')[0] + '.'
+        
+        return line if len(line) > 3 else None
+    
+    def _fallback_extraction(self, raw_response: str) -> Optional[str]:
+        """Fallback extraction method for difficult responses."""
+        
+        # Try to find any meaningful content
+        lines = raw_response.split('\n')
+        
+        # Look for the shortest meaningful line (likely to be a title/answer)
+        candidates = []
+        for line in lines:
+            line = line.strip()
+            if (line and 3 <= len(line) <= 100 and 
+                not line.startswith(('<', '>', '#', '```', '---')) and
+                not any(phrase in line.lower() for phrase in [
+                    'think', 'okay', 'let me', 'the user', 'i need', 'hmm'
+                ])):
+                candidates.append(line)
+        
+        if candidates:
+            # Return the shortest candidate (likely to be most direct)
+            best = min(candidates, key=len)
+            return self._clean_response_line(best)
+        
+        # Absolute fallback - return first 50 chars
+        cleaned = re.sub(r'^[<>]*\s*', '', raw_response)
+        return cleaned[:50].strip() if cleaned else None
 
 
 class ObsidianWriter:
@@ -165,23 +243,30 @@ class ObsidianWriter:
             return f"Audio Note - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         
         # Extract first few sentences for context
-        preview = transcription[:300] + "..." if len(transcription) > 300 else transcription
+        preview = transcription[:200] + "..." if len(transcription) > 200 else transcription
         
-        prompt = f"""Generate a concise, descriptive title (maximum 8 words) for this audio transcription:
+        # More direct prompt
+        prompt = f"""Content: {preview}
 
-"{preview}"
-
+Task: Create a title (max 8 words)
 Title:"""
         
-        enhanced_title = self.ollama_client.generate_text(prompt, max_tokens=50, temperature=0.3)
+        enhanced_title = self.ollama_client.generate_text(prompt, max_tokens=20, temperature=0.2)
         
-        if enhanced_title:
+        if enhanced_title and len(enhanced_title.strip()) > 2:
             # Clean and validate the title
             enhanced_title = re.sub(r'[<>:"/\\|?*]', '', enhanced_title)  # Remove invalid filename chars
             enhanced_title = enhanced_title.strip().strip('"').strip("'")
+            
+            # Remove common prefixes
+            enhanced_title = re.sub(r'^(title[:\s]*|answer[:\s]*)', '', enhanced_title, flags=re.IGNORECASE)
+            
             if len(enhanced_title) > 100:  # Reasonable length limit
                 enhanced_title = enhanced_title[:100]
-            return enhanced_title
+            
+            # Ensure we have a meaningful title
+            if len(enhanced_title.strip()) > 2:
+                return enhanced_title.strip()
         
         # Fallback if AI enhancement fails
         return f"Audio Note - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
@@ -191,23 +276,32 @@ Title:"""
         if not self.use_ai_enhancement or not self.ollama_client:
             return ["audio-note", "transcription"]
         
-        # Use first 500 characters for tag generation
-        content_preview = transcription[:500] + "..." if len(transcription) > 500 else transcription
+        # Use first 300 characters for tag generation
+        content_preview = transcription[:300] + "..." if len(transcription) > 300 else transcription
         
-        prompt = f"""Generate 3-5 relevant tags for organizing this transcription. Use lowercase and hyphens instead of spaces:
+        # More direct prompt
+        prompt = f"""Content: {content_preview}
 
-"{content_preview}"
-
+Task: List 3-5 tags (lowercase, hyphens only)
 Tags:"""
         
-        tags_response = self.ollama_client.generate_text(prompt, max_tokens=100, temperature=0.4)
+        tags_response = self.ollama_client.generate_text(prompt, max_tokens=30, temperature=0.3)
         
         if tags_response:
-            # Parse and clean tags
-            tags = [tag.strip().lower() for tag in tags_response.split(',')]
-            tags = [re.sub(r'[^a-z0-9\-]', '', tag) for tag in tags if tag.strip()]
+            # Parse and clean tags - handle various formats
+            tags_text = tags_response.lower().strip()
+            
+            # Remove common prefixes
+            tags_text = re.sub(r'^(tags[:\s]*|answer[:\s]*)', '', tags_text, flags=re.IGNORECASE)
+            
+            # Split by various delimiters
+            tags = re.split(r'[,\s\n]+', tags_text)
+            tags = [re.sub(r'[^a-z0-9\-]', '', tag.strip()) for tag in tags if tag.strip()]
             tags = [tag for tag in tags if len(tag) > 1 and len(tag) < 30]  # Reasonable length
-            return tags[:5] if tags else ["audio-note", "transcription"]
+            
+            # Ensure we have at least some basic tags
+            if tags and len(tags) <= 5:
+                return tags + ["audio-note"] if "audio-note" not in tags else tags
         
         return ["audio-note", "transcription"]
     
@@ -216,19 +310,26 @@ Tags:"""
         if not self.use_ai_enhancement or not self.ollama_client:
             return transcription
         
-        prompt = f"""Improve this transcription with proper formatting, fix grammar, and add paragraph breaks:
+        # For content enhancement, use a smaller chunk to avoid truncation
+        content_chunk = transcription[:800] if len(transcription) > 800 else transcription
+        
+        prompt = f"""Fix grammar and format this text with proper paragraphs:
 
-"{transcription}"
+{content_chunk}
 
-Improved version:"""
+Improved text:"""
         
         enhanced_content = self.ollama_client.generate_text(
             prompt, 
-            max_tokens=len(transcription.split()) * 2,  # Allow for expansion
-            temperature=0.3
+            max_tokens=min(len(content_chunk.split()) * 2, 1000),  # Allow for expansion but limit
+            temperature=0.2
         )
         
-        return enhanced_content if enhanced_content else transcription
+        if enhanced_content and len(enhanced_content.strip()) > len(content_chunk) * 0.3:
+            # Only use enhanced content if it seems reasonable (not truncated too much)
+            return enhanced_content
+        
+        return transcription
     
     def generate_summary(self, transcription: str) -> str:
         """Generate a brief summary of the transcription."""
@@ -239,14 +340,27 @@ Improved version:"""
                 return "Short audio note."
             return f"Audio transcription with approximately {len(words)} words."
         
-        prompt = f"""Summarize this transcription in 1-2 sentences:
+        # Use first 500 chars for summary
+        content_preview = transcription[:500] + "..." if len(transcription) > 500 else transcription
+        
+        prompt = f"""Content: {content_preview}
 
-"{transcription}"
-
+Task: Write a 1-sentence summary
 Summary:"""
         
-        summary = self.ollama_client.generate_text(prompt, max_tokens=100, temperature=0.4)
-        return summary if summary else "Audio transcription note."
+        summary = self.ollama_client.generate_text(prompt, max_tokens=50, temperature=0.3)
+        
+        if summary and len(summary.strip()) > 10:
+            # Clean the summary
+            summary = re.sub(r'^(summary[:\s]*|answer[:\s]*)', '', summary, flags=re.IGNORECASE)
+            summary = summary.strip().strip('"').strip("'")
+            
+            if len(summary.strip()) > 10:
+                return summary.strip()
+        
+        # Fallback
+        words = transcription.split()
+        return f"Audio discussion covering {len(words)} words on various topics."
     
     def create_note(self, 
                    transcription: str, 

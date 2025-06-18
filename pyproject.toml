@@ -24,8 +24,8 @@ dependencies = [
     "pydantic>=2.0.0",
     "loguru>=0.7.0",
     "accelerate>=1.7.0",
-    # HTTP requests for Ollama integration
-    "requests>=2.31.0",
+    # Ollama integration
+    "ollama>=0.5.0",
 ]
 
 [project.scripts]
