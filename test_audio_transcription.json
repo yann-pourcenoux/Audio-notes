@@ -1,0 +1,28 @@
+{
+  "text": ".",
+  "chunks": [
+    {
+      "timestamp": [
+        0.0,
+        3.0
+      ],
+      "text": "."
+    }
+  ],
+  "language": {
+    "detected": null,
+    "specified": "en",
+    "name": "English"
+  },
+  "task": "translate",
+  "metadata": {
+    "processing_time": 9.190241575241089,
+    "audio_duration": 3.0,
+    "model": "openai/whisper-large-v3",
+    "device": "cpu",
+    "torch_dtype": "torch.float32",
+    "timestamp_level": "sentence",
+    "temperature": 0.5,
+    "chunk_length_s": 30
+  }
+}
