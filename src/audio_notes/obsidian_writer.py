@@ -198,51 +198,188 @@ class OllamaClient:
         
         # Parse structured response if format was specified
         if response_format:
-            try:
-                return response_format.model_validate_json(content)
-            except Exception as e:
-                logger.warning(f"Failed to parse structured response: {e}")
-                # Fallback to extracting useful content from raw response
-                return self._extract_from_thinking_response(content)
+            # Try multiple parsing strategies
+            structured_result = self._parse_structured_response(content, response_format)
+            if structured_result:
+                return structured_result
+            
+            # Fallback to extracting useful content from raw response
+            logger.debug("Structured parsing failed, falling back to text extraction")
+            return self._extract_from_thinking_response(content)
         
         # For unstructured responses, extract useful content
         return self._extract_from_thinking_response(content)
     
-    def _extract_from_thinking_response(self, content: str) -> Optional[str]:
-        """Extract useful content from thinking-enabled responses."""
+    def _parse_structured_response(self, content: str, response_format: BaseModel) -> Optional[BaseModel]:
+        """Enhanced structured response parsing with multiple strategies."""
         if not content:
             return None
         
-        # Look for structured thinking patterns
+        # Strategy 1: Direct JSON parsing (original approach)
+        try:
+            return response_format.model_validate_json(content)
+        except Exception:
+            logger.debug("Direct JSON parsing failed, trying extraction methods")
+        
+        # Strategy 2: Extract JSON from mixed content
+        json_extracted = self._extract_json_from_content(content)
+        if json_extracted:
+            try:
+                return response_format.model_validate_json(json_extracted)
+            except Exception:
+                logger.debug("Extracted JSON parsing failed")
+        
+        # Strategy 3: Try to construct JSON from key-value patterns
+        constructed_json = self._construct_json_from_patterns(content, response_format)
+        if constructed_json:
+            try:
+                return response_format.model_validate_json(constructed_json)
+            except Exception:
+                logger.debug("Constructed JSON parsing failed")
+        
+        return None
+    
+    def _extract_json_from_content(self, content: str) -> Optional[str]:
+        """Extract JSON object from mixed content."""
+        import json
+        
+        # Look for JSON objects in the content
+        json_patterns = [
+            r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}',  # Simple nested JSON
+            r'\{.*?\}',  # Basic JSON object
+        ]
+        
+        for pattern in json_patterns:
+            matches = re.findall(pattern, content, re.DOTALL)
+            for match in matches:
+                try:
+                    # Validate it's actually JSON
+                    json.loads(match)
+                    return match
+                except json.JSONDecodeError:
+                    continue
+        
+        return None
+    
+    def _construct_json_from_patterns(self, content: str, response_format: BaseModel) -> Optional[str]:
+        """Construct JSON from common response patterns."""
+        import json
+        
+        # Get the expected fields from the model
+        model_fields = response_format.model_fields
+        
+        # Try to extract values for each field
+        extracted_data = {}
+        
+        for field_name, field_info in model_fields.items():
+            # Look for common patterns like "title: value" or "Title: value"
+            patterns = [
+                rf'{field_name}[:\s]+["\']?([^"\'\n]+)["\']?',
+                rf'{field_name.title()}[:\s]+["\']?([^"\'\n]+)["\']?',
+                rf'{field_name.upper()}[:\s]+["\']?([^"\'\n]+)["\']?',
+                # Natural language patterns
+                rf'(?:the\s+)?{field_name}(?:\s+should\s+be|\s+is|\s+would\s+be)[:\s]*["\']?([^"\'\n]+)["\']?',
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, content, re.IGNORECASE)
+                if match:
+                    value = match.group(1).strip()
+                    # Handle list fields
+                    if hasattr(field_info.annotation, '__origin__') and field_info.annotation.__origin__ is list:
+                        # Split by common delimiters
+                        value = [item.strip() for item in re.split(r'[,;\n]', value) if item.strip()]
+                    extracted_data[field_name] = value
+                    break
+        
+        if extracted_data:
+            try:
+                return json.dumps(extracted_data)
+            except Exception:
+                pass
+        
+        return None
+
+    def _extract_from_thinking_response(self, content: str) -> Optional[str]:
+        """Extract useful content from thinking-enabled responses with enhanced patterns."""
+        if not content:
+            return None
+        
+        # Enhanced structured thinking patterns
         patterns = [
             r"Here is my response:\s*(.+)",
             r"My answer:\s*(.+)",
             r"Response:\s*(.+)",
             r"Final answer:\s*(.+)",
+            r"Answer:\s*(.+)",
+            r"Result:\s*(.+)",
+            r"Output:\s*(.+)",
+            r"Solution:\s*(.+)",
+            r"Conclusion:\s*(.+)",
+            # Pattern for quoted responses (full quotes only)
+            r'^["\']([^"\']+)["\']$',
+            # Pattern for responses after thinking blocks
+            r"</think>\s*(.+)",
+            r"<think>.*?</think>\s*(.+)",
         ]
         
         for pattern in patterns:
             match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
             if match:
                 extracted = match.group(1).strip()
+                # Clean up common artifacts
+                extracted = self._clean_extracted_content(extracted)
                 if len(extracted) > 3:
                     return extracted
         
-        # Fallback: look for content after thinking section
-        thinking_end_patterns = [
-            r"Here is my thought process:.*?(?=Here is my response:|My answer:|Response:|$)",
-            r"Let me think.*?(?=Here is my response:|My answer:|Response:|$)",
-        ]
-        
-        for pattern in thinking_end_patterns:
-            content = re.sub(pattern, "", content, flags=re.DOTALL | re.IGNORECASE)
+        # Enhanced fallback: remove thinking sections and clean content
+        cleaned_content = self._remove_thinking_sections(content)
         
         # Clean up and return
-        content = content.strip()
-        if len(content) > 3:
-            return content
+        cleaned_content = self._clean_extracted_content(cleaned_content)
+        if len(cleaned_content) > 3:
+            return cleaned_content
         
         return None
+    
+    def _clean_extracted_content(self, content: str) -> str:
+        """Clean extracted content from common artifacts."""
+        if not content:
+            return ""
+        
+        # Remove common prefixes and artifacts
+        prefixes_to_remove = [
+            r'^(title[:\s]*|answer[:\s]*|response[:\s]*|result[:\s]*)',
+            r'^(would\s+be[:\s]*|should\s+be[:\s]*|is[:\s]*)',
+            r'^["\']',  # Leading quotes
+            r'["\']$',  # Trailing quotes
+        ]
+        
+        for prefix in prefixes_to_remove:
+            content = re.sub(prefix, '', content, flags=re.IGNORECASE)
+        
+        # Clean up whitespace and newlines
+        content = re.sub(r'\s+', ' ', content)
+        content = content.strip()
+        
+        return content
+    
+    def _remove_thinking_sections(self, content: str) -> str:
+        """Remove thinking sections from content."""
+        # Patterns to remove thinking sections
+        thinking_patterns = [
+            r"<think>.*?</think>",
+            r"Here is my thought process:.*?(?=Here is my response:|My answer:|Response:|Answer:|$)",
+            r"Let me think.*?(?=Here is my response:|My answer:|Response:|Answer:|$)",
+            r"I need to.*?(?=Here is my response:|My answer:|Response:|Answer:|$)",
+            r"First, I.*?(?=Here is my response:|My answer:|Response:|Answer:|$)",
+            r"Let me analyze.*?(?=Here is my response:|My answer:|Response:|Answer:|$)",
+        ]
+        
+        for pattern in thinking_patterns:
+            content = re.sub(pattern, "", content, flags=re.DOTALL | re.IGNORECASE)
+        
+        return content.strip()
     
     def generate_text(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> Optional[str]:
         """Generate text using enhanced chat API with thinking."""
