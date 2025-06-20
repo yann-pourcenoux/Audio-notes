@@ -2,558 +2,165 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
-        "title": "Setup Project Repository",
-        "description": "Initialize the project repository with version control and basic structure.",
-        "details": "Create a new Git repository for the project. Set up the initial directory structure with folders for scripts, tests, and documentation. Initialize a README file and a .gitignore file to exclude unnecessary files from version control. Use GitHub or GitLab for remote repository hosting.",
-        "testStrategy": "Verify that the repository is accessible and the initial structure is correctly set up by cloning it to a different location.",
-        "priority": "medium",
+        "id": 14,
+        "title": "Restructure Package to src-layout",
+        "description": "Reorganize the project structure to follow the src-layout best practices.",
+        "details": "Move all source code to the src/audio_notes/ directory. Ensure that all modules are properly organized within this structure. Implement version management in __init__.py files and set up proper imports and exports.",
+        "testStrategy": "Verify that the project builds successfully and all imports are resolved correctly. Run existing tests to ensure no functionality is broken.",
+        "priority": "high",
         "dependencies": [],
         "status": "done",
         "subtasks": []
       },
       {
-        "id": 2,
-        "title": "Configure Python Environment with uv",
-        "description": "Set up the Python environment using uv for dependency management.",
-        "details": "Install uv and create a new Python environment. Define the dependencies in a uv-compatible format, including Python 3.12+, HuggingFace Transformers, and any other necessary libraries. Generate a lockfile to ensure reproducibility.\n<info added on 2025-06-16T19:00:42.688Z>\nResearch and implement the latest best practices for setting up a Python environment with the `uv` package manager, focusing on pyproject.toml configuration, virtual environment creation, and dependency management for AI/ML projects using HuggingFace Transformers. Ensure the setup includes:\n\n1. Installation of `uv` and creation of a virtual environment using `uv init`.\n2. Configuration of `pyproject.toml` with project metadata and dependencies, including Python 3.12+, HuggingFace Transformers, torch, numpy, and pandas.\n3. Management of dependencies using `uv install` and generation of a lockfile for reproducibility.\n4. Utilization of `uv sync` to maintain consistent environments across different setups.\n5. Implementation of best practices such as version pinning, environment variable management, GPU support considerations, regular testing, and comprehensive documentation.\n6. Troubleshooting strategies for dependency conflicts, platform-specific issues, and performance optimizations.\n</info added on 2025-06-16T19:00:42.688Z>\n<info added on 2025-06-16T20:54:20.038Z>\nThe Python environment has been successfully configured using `uv` version 0.6.12, following best practices for AI/ML projects. The project structure adheres to modern Python packaging standards, utilizing the `src` layout with the `audio_notes` package located in `src/audio_notes/`. The `pyproject.toml` file has been meticulously configured to include all necessary dependencies, ensuring a robust and reproducible environment.\n\nTo maintain consistency across different setups, the `uv.lock` file has been generated, locking the exact versions of all dependencies. This lockfile ensures that the environment remains consistent, preventing potential issues related to dependency updates. Additionally, the `audio-notes` command-line interface (CLI) has been successfully created, providing a user-friendly entry point for the application.\n\nAll core dependencies, including HuggingFace Transformers, torch, torchaudio, librosa, soundfile, pandas, and numpy, have been verified and are functioning correctly. The environment has been thoroughly tested, confirming that all key libraries import successfully and that the CLI application runs as expected. The package metadata, including version 0.1.0 and a proper description, is accessible and correctly configured.\n\nWhile CUDA support is included in the PyTorch installation, it is important to note that the current system does not have GPU capabilities, and the environment is operating in a CPU-only mode. This setup ensures that the application remains functional and efficient, even without GPU resources.\n</info added on 2025-06-16T20:54:20.038Z>",
-        "testStrategy": "Run uv to install dependencies and verify that all packages are correctly installed and the environment is activated.",
+        "id": 15,
+        "title": "Implement CLI Entry Points",
+        "description": "Create proper entry points for CLI commands using console_scripts.",
+        "details": "Configure the pyproject.toml to include console_scripts entry points for the CLI tool. Ensure that the CLI commands are accessible and functional when the package is installed.",
+        "testStrategy": "Test the CLI commands manually to ensure they are accessible and perform the expected actions. Verify that the commands are listed when running the CLI tool with the --help flag.",
         "priority": "high",
         "dependencies": [
-          1
+          14
         ],
         "status": "done",
         "subtasks": []
       },
       {
-        "id": 3,
-        "title": "Implement Audio File Loader and Format Normalizer",
-        "description": "Develop a module to load and normalize audio files for transcription, optimized for OpenAI's Whisper Large-v3 model.",
-        "status": "done",
-        "dependencies": [
-          2
-        ],
-        "priority": "high",
-        "details": "Utilize Python libraries like librosa to process audio files in formats such as WAV, MP3, M4A, and FLAC. The module should:\n\n- Resample audio to a 16 kHz sampling rate, as Whisper Large-v3 expects this rate for optimal performance. ([comet.arts.ubc.ca](https://comet.arts.ubc.ca/docs/4_Advanced/advanced_transcription/advanced_transcription_whisper.html?utm_source=openai))\n- Convert audio to mono channel, since Whisper requires single-channel input. ([dataloop.ai](https://dataloop.ai/library/model/openai_whisper-large-v3/?utm_source=openai))\n- Normalize audio amplitude to prevent clipping while maintaining signal quality.\n- Handle 128 Mel frequency bins, aligning with Whisper Large-v3's specifications. ([github.com](https://github.com/zzc0208/Whisper-vits-svc-LargeV3/blob/MiX3/README.md?utm_source=openai))\n- Prepare audio in a numpy array format compatible with the HuggingFace Transformers pipeline.\n- Support both short audio clips and long-form audio, considering Whisper's 30-second receptive field. ([huggingface.co](https://huggingface.co/openai/whisper-large-v3?utm_source=openai))\n\nThe implementation should ensure compatibility with the HuggingFace Transformers pipeline's expected input format, facilitating seamless integration with Whisper Large-v3 for transcription tasks.\n<info added on 2025-06-16T21:05:26.898Z>\nTo optimize audio preprocessing for OpenAI's Whisper Large-v3 model using `librosa` and `soundfile`, adhere to the following best practices:\n\n1. **Resampling Audio Data**: Ensure all audio files are resampled to a consistent 16 kHz sampling rate, as Whisper models are pretrained with this rate. ([d2wozrt205r2fu.cloudfront.net](https://d2wozrt205r2fu.cloudfront.net/p/data-preprocessing-in-ai-answer-best-practices-audio-cat-ai?utm_source=openai))\n\n2. **Audio Format Handling**: Convert audio files to uncompressed formats like WAV for better quality during transcription. ([restack.io](https://www.restack.io/p/data-preprocessing-in-ai-answer-audio-data-preparation-methods-cat-ai?utm_source=openai))\n\n3. **Preparing Numpy Arrays for Hugging Face Transformers Pipeline**: Use `soundfile` to read audio files into numpy arrays, ensuring compatibility with the Hugging Face Transformers pipeline. ([github.com](https://github.com/huggingface/transformers/issues/26075?utm_source=openai))\n\n4. **Handling Long Audio Files**: Segment longer audio files into 30-second clips to align with Whisper's optimal performance duration. ([restack.io](https://www.restack.io/p/data-preprocessing-in-ai-answer-audio-data-preparation-methods-cat-ai?utm_source=openai))\n\n5. **Feature Extraction**: Utilize `librosa` to compute log-Mel spectrograms, which are effective representations for Whisper models. ([33rdsquare.com](https://www.33rdsquare.com/audio-voice-processing-deep-learning/?utm_source=openai))\n\n6. **Error Handling and Logging**: Implement robust error handling and logging to facilitate debugging and maintainability.\n\n7. **Batch Processing**: For processing multiple audio files efficiently, implement batch processing techniques to enhance speed and manageability.\n\nBy following these practices, you can effectively preprocess and normalize audio for the Whisper Large-v3 model, ensuring optimal performance and transcription accuracy.\n</info added on 2025-06-16T21:05:26.898Z>\n<info added on 2025-06-16T21:09:04.597Z>\nThe Audio File Loader and Format Normalizer has been successfully implemented, optimized for OpenAI's Whisper Large-v3 model. The module processes audio files in formats such as WAV, MP3, M4A, and FLAC, performing the following operations:\n\n- **Resampling**: Audio is resampled to a 16 kHz sampling rate using the high-quality 'soxr_hq' algorithm, aligning with Whisper's requirements.\n\n- **Mono Conversion**: Multi-channel audio is averaged to mono, as Whisper requires single-channel input.\n\n- **Normalization**: Amplitude is normalized to a peak of 0.95 to prevent clipping while maintaining signal quality.\n\n- **Feature Extraction**: Audio is prepared with 128 Mel frequency bins, matching Whisper's specifications.\n\n- **Format Compatibility**: The output is a float32 numpy array, compatible with the HuggingFace Transformers pipeline.\n\nThe module also handles long-form audio by segmenting files longer than 30 seconds into 30-second chunks with overlap, ensuring compatibility with Whisper's 30-second receptive field. Batch processing is supported, allowing multiple files to be processed efficiently with progress callbacks. Comprehensive error handling and informative messages are implemented to facilitate debugging and maintainability.\n\nAll tests have passed successfully, confirming the module's functionality and readiness for integration with Whisper Large-v3.\n</info added on 2025-06-16T21:09:04.597Z>",
-        "testStrategy": "Test the module with audio files of different formats and lengths, verifying that the output is consistent, normalized, and ready for transcription with Whisper Large-v3.",
-        "subtasks": [
-          {
-            "id": 3.1,
-            "title": "Implement Audio Resampling to 16 kHz",
-            "description": "Use librosa to resample audio files to a 16 kHz sampling rate, as required by Whisper Large-v3 for optimal performance. ([comet.arts.ubc.ca](https://comet.arts.ubc.ca/docs/4_Advanced/advanced_transcription/advanced_transcription_whisper.html?utm_source=openai))",
-            "status": "done"
-          },
-          {
-            "id": 3.2,
-            "title": "Convert Audio to Mono Channel",
-            "description": "Ensure that all audio files are converted to mono channel, aligning with Whisper's requirement for single-channel input. ([dataloop.ai](https://dataloop.ai/library/model/openai_whisper-large-v3/?utm_source=openai))",
-            "status": "done"
-          },
-          {
-            "id": 3.3,
-            "title": "Normalize Audio Amplitude",
-            "description": "Implement normalization of audio amplitude to prevent clipping while maintaining signal quality, ensuring compatibility with Whisper Large-v3. ([github.com](https://github.com/zzc0208/Whisper-vits-svc-LargeV3/blob/MiX3/README.md?utm_source=openai))",
-            "status": "done"
-          },
-          {
-            "id": 3.4,
-            "title": "Handle 128 Mel Frequency Bins",
-            "description": "Adjust audio processing to handle 128 Mel frequency bins, as specified by Whisper Large-v3, to capture detailed audio features. ([github.com](https://github.com/zzc0208/Whisper-vits-svc-LargeV3/blob/MiX3/README.md?utm_source=openai))",
-            "status": "done"
-          },
-          {
-            "id": 3.5,
-            "title": "Prepare Audio in Numpy Array Format",
-            "description": "Ensure that the processed audio is outputted in a numpy array format compatible with the HuggingFace Transformers pipeline, facilitating seamless integration with Whisper Large-v3. ([huggingface.co](https://huggingface.co/openai/whisper-large-v3?utm_source=openai))",
-            "status": "done"
-          },
-          {
-            "id": 3.6,
-            "title": "Support Long-Form Audio Processing",
-            "description": "Implement functionality to handle both short audio clips and long-form audio, considering Whisper's 30-second receptive field, to accommodate various transcription scenarios. ([huggingface.co](https://huggingface.co/openai/whisper-large-v3?utm_source=openai))",
-            "status": "done"
-          }
-        ]
-      },
-      {
-        "id": 4,
-        "title": "Integrate HuggingFace Model for Transcription",
-        "description": "Integrate OpenAI's Whisper Large-v3 model from HuggingFace for transcribing audio files.",
-        "status": "done",
-        "dependencies": [
-          3
-        ],
-        "priority": "high",
-        "details": "Utilize the HuggingFace Transformers library to load OpenAI's Whisper Large-v3 model. Implement a function to transcribe normalized audio files into text, ensuring compatibility with the audio format produced by the loader. The Whisper Large-v3 model offers several enhancements over its predecessors, including:\n\n- Support for 99 languages with improved performance (10-20% error reduction compared to large-v2).\n- Utilization of 128 Mel frequency bins, allowing for more detailed audio representation.\n- Inclusion of Cantonese support.\n- Compatibility with the HuggingFace Transformers pipeline for seamless integration.\n- Capability to handle both transcription and translation tasks.\n- Support for timestamp generation at both sentence and word levels.\n- Ability to process long-form audio files exceeding 30 seconds using a chunked approach.\n- Support for batch processing of multiple audio files.\n\nImplementation should leverage the HuggingFace Transformers pipeline approach for simplicity, with options for:\n\n- Automatic language detection or manual language specification.\n- Temperature fallback and other decoding strategies.\n- Timestamp generation for structured output.\n- Batch processing capabilities.\n\nThe model requires the following packages, which are already installed in our environment:\n\n- transformers\n- torch\n- datasets[audio]",
-        "testStrategy": "Validate the transcription accuracy by comparing the output text with known transcripts of test audio files. Additionally, assess the model's performance in handling long-form audio files and batch processing to ensure robustness and efficiency.",
-        "subtasks": [
-          {
-            "id": 4.1,
-            "title": "Load Whisper Large-v3 Model",
-            "status": "done",
-            "description": "Successfully loaded OpenAI's Whisper Large-v3 model using the HuggingFace Transformers library."
-          },
-          {
-            "id": 4.2,
-            "title": "Implement Transcription Function",
-            "status": "done",
-            "description": "Developed a function to transcribe normalized audio files into text using the Whisper Large-v3 model."
-          },
-          {
-            "id": 4.3,
-            "title": "Ensure Audio Format Compatibility",
-            "status": "done",
-            "description": "Verified that the transcription function is compatible with the audio format produced by the loader."
-          },
-          {
-            "id": 4.4,
-            "title": "Implement Automatic Language Detection",
-            "status": "done",
-            "description": "Added functionality to automatically detect the language of the input audio for transcription using the Whisper model's built-in language detection capabilities."
-          },
-          {
-            "id": 4.5,
-            "title": "Implement Manual Language Specification",
-            "status": "done",
-            "description": "Added functionality to allow manual specification of the language for transcription, enabling users to specify the language of the audio input."
-          },
-          {
-            "id": 4.6,
-            "title": "Implement Decoding Strategies",
-            "status": "done",
-            "description": "Integrated temperature fallback and other decoding strategies to enhance transcription accuracy, allowing for a balance between accuracy and diversity in the transcribed text."
-          },
-          {
-            "id": 4.7,
-            "title": "Implement Timestamp Generation",
-            "status": "done",
-            "description": "Enabled generation of sentence-level and word-level timestamps in the transcription output, providing detailed timing information for each segment of the transcribed text."
-          },
-          {
-            "id": 4.8,
-            "title": "Implement Chunked Long-Form Audio Processing",
-            "status": "done",
-            "description": "Developed functionality to process long-form audio files exceeding 30 seconds using a chunked approach, utilizing the Whisper model's chunked processing capabilities to handle long audio inputs efficiently."
-          },
-          {
-            "id": 4.9,
-            "title": "Implement Batch Processing of Multiple Audio Files",
-            "status": "done",
-            "description": "Added support for batch processing of multiple audio files to improve efficiency, allowing the system to handle multiple audio files simultaneously and reducing overall processing time."
-          },
-          {
-            "id": 4.11,
-            "title": "Test Long-Form Audio Processing",
-            "status": "done",
-            "description": "Assessed the model's performance in handling long-form audio files to ensure robustness, testing the chunked processing approach with extended audio inputs to verify that the system can handle longer durations without degradation in performance or accuracy."
-          },
-          {
-            "id": 4.12,
-            "title": "Test Batch Processing Efficiency",
-            "status": "done",
-            "description": "Evaluated the efficiency of batch processing multiple audio files to ensure scalability, processing a large number of audio files in parallel and measuring the time taken to complete the task, ensuring that the system can scale effectively to handle increased workloads."
-          }
-        ]
-      },
-      {
-        "id": 5,
-        "title": "Implement Obsidian Markdown Writer",
-        "description": "Develop a module to write transcriptions as Markdown notes in an Obsidian vault, integrating Qwen 3:0.6B via Ollama for intelligent content enhancement.",
-        "status": "done",
-        "dependencies": [
-          4
-        ],
-        "priority": "high",
-        "details": "Implement file I/O operations to create or append Markdown files in the specified Obsidian vault. Utilize Python's built-in file handling capabilities to manage note titling, tagging, and folder organization. Integrate Qwen 3:0.6B via Ollama to enhance content structuring, title generation, tagging, summarization, and link suggestions. Ensure proper error handling for file access issues and manage local LLM processing resources effectively.\n<info added on 2025-06-17T19:25:18.616Z>\nThe local environment for integrating Qwen 3:0.6B via Ollama into the Obsidian Markdown Writer has been successfully set up. The next step is to proceed with subtask 5.2 to integrate the model with the Obsidian Markdown Writer.\n</info added on 2025-06-17T19:25:18.616Z>\n<info added on 2025-06-17T19:52:39.477Z>\nThe integration of Qwen 3:0.6B via Ollama into the Obsidian Markdown Writer has been successfully completed, encompassing the following achievements:\n\n- Implemented the `ObsidianWriter` class, fully integrating Qwen 3:0.6B to enhance content structuring, title generation, tagging, summarization, and link suggestions.\n\n- Developed intelligent response parsing to effectively handle the model's processing outputs.\n\n- Created a test note titled \"Obsidian Qwen Integration,\" demonstrating the AI-enhanced title generation and metadata integration.\n\nThe next steps involve implementing robust error handling for file I/O operations and managing local LLM processing resources effectively.\n\n**Error Handling for File I/O Operations:**\n\nTo ensure the stability and reliability of the Obsidian Markdown Writer, it's essential to implement comprehensive error handling for file I/O operations. This includes:\n\n- **Validating File Paths and Names:** Ensure that file paths and names conform to the operating system's conventions and Obsidian's requirements. Avoid using invalid characters such as `*`, `?`, `|`, and `\\` in filenames, as these can cause issues within Obsidian. ([forum.obsidian.md](https://forum.obsidian.md/t/consolidation-handling-of-invalid-filenames-created-outside-obsidian/3250?utm_source=openai))\n\n- **Handling File Access Permissions:** Implement checks to verify that the application has the necessary permissions to read from and write to the specified directories. Handle exceptions like `PermissionError` gracefully to inform users of any access issues.\n\n- **Managing File Existence:** Before attempting to create or modify files, check for their existence to prevent overwriting important data. If a file already exists, prompt the user for confirmation or automatically generate a unique filename.\n\n- **Logging Errors:** Utilize Python's `logging` module to record detailed error messages, including stack traces and contextual information, to facilitate debugging and maintenance. ([llego.dev](https://llego.dev/posts/best-practices-error-handling-file-input-output-python/?utm_source=openai))\n\n**Managing Local LLM Processing Resources:**\n\nEfficient management of local LLM processing resources is crucial for optimal performance. Consider the following strategies:\n\n- **Resource Allocation:** Assess the computational resources required by Qwen 3:0.6B and allocate them accordingly. Ensure that the system has sufficient CPU, GPU, and memory resources to handle the model's demands.\n\n- **Concurrency Management:** If running multiple instances of the model, manage concurrency to prevent resource contention. Utilize multiprocessing or multi-threading techniques to distribute the workload effectively. ([medium.com](https://medium.com/%40sangho.oh/efficient-llm-processing-with-ollama-on-local-multi-gpu-server-environment-33bc8e8550c4?utm_source=openai))\n\n- **Monitoring Resource Usage:** Implement monitoring tools to track CPU, GPU, and memory usage during model inference. This will help identify bottlenecks and optimize performance.\n\n- **Optimizing Model Performance:** Consider using higher precision models if the hardware allows, as they can offer better performance without significant resource overhead. ([sebastianpdw.medium.com](https://sebastianpdw.medium.com/common-mistakes-in-local-llm-deployments-03e7d574256b?utm_source=openai))\n\nBy addressing these areas, the Obsidian Markdown Writer will be more robust and efficient, providing a seamless experience for users.\n</info added on 2025-06-17T19:52:39.477Z>\n<info added on 2025-06-17T20:01:34.408Z>\nThe Obsidian Markdown Writer has been enhanced with comprehensive error handling and resource management:\n\n**Error Handling Improvements:**\n- Implemented input validation across all methods to handle empty content and invalid paths.\n- Established comprehensive exception handling with specific error types, including `PermissionError`, `OSError`, and `ValueError`.\n- Integrated detailed logging with appropriate levels (debug, info, warning, error) to facilitate debugging and maintenance.\n- Developed graceful fallbacks for scenarios where AI enhancement fails, ensuring uninterrupted user experience.\n- Sanitized filenames to prevent filesystem issues, adhering to operating system conventions and Obsidian's requirements.\n- Implemented file conflict resolution with automatic unique naming to prevent overwriting important data.\n- Validated vault paths and incorporated error handling for creation failures, ensuring robust directory management.\n\n**Resource Management Enhancements:**\n- Initialized the Ollama client with availability checks to ensure the AI model is accessible before processing.\n- Established automatic fallback mechanisms to non-AI mode when Ollama is unavailable, maintaining functionality without AI enhancements.\n- Implemented retry mechanisms with exponential backoff for API calls to handle transient errors effectively.\n- Managed timeout handling for network requests to prevent prolonged delays and ensure responsiveness.\n- Optimized memory usage through efficient response parsing, enhancing performance during AI processing.\n- Ensured proper resource cleanup and connection management to maintain system stability and prevent resource leaks.\n\n**Testing Outcomes:**\n- Successfully created a test note titled \"Testing Qwen 3.0.6B Obsidian Integration,\" demonstrating AI-enhanced title generation and metadata integration.\n- Verified that all error handling paths function correctly, with logging confirming the proper initialization sequence.\n- Confirmed that AI enhancement features, including improved title generation, operate as intended.\n\nWith these enhancements, the Obsidian Markdown Writer is now robust and production-ready, offering a seamless experience for users.\n</info added on 2025-06-17T20:01:34.408Z>\n<info added on 2025-06-17T20:04:34.730Z>\nThe Obsidian Markdown Writer, integrated with Qwen 3:0.6B via Ollama, has successfully passed all comprehensive tests, confirming its readiness for production deployment.\n</info added on 2025-06-17T20:04:34.730Z>",
-        "testStrategy": "Test writing operations by creating and appending notes in a test Obsidian vault and verifying the content and structure. Validate the integration of Qwen 3:0.6B by assessing the quality of content enhancement, including intelligent structuring, title generation, tagging, summarization, and link suggestions. Ensure that the local LLM processing meets performance and resource utilization expectations.",
-        "subtasks": [
-          {
-            "id": 5.1,
-            "title": "Set Up Local Environment for Qwen 3:0.6B via Ollama",
-            "description": "Install and configure Ollama to run Qwen 3:0.6B locally, ensuring all necessary dependencies and resources are in place for optimal performance.",
-            "status": "done"
-          },
-          {
-            "id": 5.2,
-            "title": "Integrate Qwen 3:0.6B with Obsidian Markdown Writer",
-            "description": "Develop the integration between Qwen 3:0.6B and the Obsidian Markdown Writer module to enable intelligent content enhancement features such as content structuring, title generation, tagging, summarization, and link suggestions.",
-            "status": "done"
-          },
-          {
-            "id": 5.3,
-            "title": "Implement File I/O Operations for Obsidian Vault",
-            "description": "Implement file I/O operations to create or append Markdown files in the specified Obsidian vault, managing note titling, tagging, and folder organization using Python's built-in file handling capabilities.",
-            "status": "done"
-          },
-          {
-            "id": 5.4,
-            "title": "Ensure Proper Error Handling and Resource Management",
-            "description": "Implement error handling for file access issues and manage local LLM processing resources effectively to ensure smooth operation of the Obsidian Markdown Writer with Qwen 3:0.6B integration.",
-            "status": "done"
-          },
-          {
-            "id": 5.5,
-            "title": "Test Writing Operations and Content Enhancement",
-            "description": "Test writing operations by creating and appending notes in a test Obsidian vault and verifying the content and structure. Validate the integration of Qwen 3:0.6B by assessing the quality of content enhancement, including intelligent structuring, title generation, tagging, summarization, and link suggestions. Ensure that the local LLM processing meets performance and resource utilization expectations.",
-            "status": "done"
-          }
-        ]
-      },
-      {
-        "id": 6,
-        "title": "Develop CLI Interface",
-        "description": "Successfully implemented a comprehensive command-line interface (CLI) using the Click library, integrating OpenAI's Whisper Large-v3 model for transcription and Qwen 3:0.6B via Ollama for intelligent CLI features. This solution provides a complete local AI pipeline without external API dependencies, ensuring a seamless user experience.",
-        "status": "completed",
-        "dependencies": [
-          5
-        ],
-        "priority": "medium",
-        "details": "Utilized the Click library to develop a user-friendly CLI that leverages Whisper Large-v3's transcription capabilities and Qwen 3:0.6B's intelligent features. The implementation includes:\n\n- **Language Specification Options**: Supports manual selection or automatic detection from 40+ languages.\n- **Task Selection**: Allows users to choose between transcription and translation to English.\n- **Timestamp Options**: Provides choices for no timestamps, sentence-level, or word-level timestamps.\n- **Model Precision Options**: Offers selection between float16 for GPU and float32 for CPU.\n- **Batch Processing**: Enables processing of multiple audio files with progress bars.\n- **Temperature and Decoding Strategy Parameters**: Configurable for transcription tasks.\n- **Long-Form Audio Processing**: Options for sequential or chunked processing methods.\n- **Output Format Options**: Supports plain text, JSON with timestamps, SRT, VTT, and TSV formats.\n- **Obsidian Vault Integration**: Ensures seamless updating of the Obsidian vault with transcriptions or translations.\n\nIncorporated AI-powered intelligent features such as:\n\n- Language suggestions based on filename analysis.\n- Interactive confirmation prompts for suggested languages.\n- Batch optimization suggestions.\n- Enhanced error messages with troubleshooting guidance.\n- Status checking for all components.\n\nThe CLI is designed to be intuitive for basic use cases while exposing the full power of Whisper Large-v3 and Qwen 3:0.6B, providing a complete local AI pipeline with no external API dependencies.",
-        "testStrategy": "Conducted comprehensive testing to verify:\n\n- Correct processing of audio files.\n- Accurate language detection.\n- Proper task execution (transcription or translation).\n- Correct timestamp generation.\n- Appropriate model precision selection.\n- Efficient batch processing with progress indicators.\n- Accurate application of temperature and decoding strategies.\n- Correct handling of long-form audio processing.\n- Accurate output formatting.\n- Successful integration with the Obsidian vault.\n\nValidated the integration of Qwen 3:0.6B via Ollama for intelligent CLI features, including:\n\n- Intelligent file path suggestions.\n- Smart parameter recommendations.\n- Automatic language detection suggestions.\n- Content-aware output format recommendations.\n- Interactive help with context-aware suggestions.\n- Batch processing optimization suggestions.\n- Enhanced error messages with intelligent troubleshooting suggestions.",
-        "subtasks": [
-          {
-            "id": 6.1,
-            "title": "Implement Language Specification Options",
-            "description": "Add CLI options to specify the language of the input audio, supporting manual selection or automatic detection from 40+ supported languages.",
-            "status": "completed"
-          },
-          {
-            "id": 6.2,
-            "title": "Implement Task Selection Options",
-            "description": "Add CLI options to select the task: transcription or translation to English.",
-            "status": "completed"
-          },
-          {
-            "id": 6.3,
-            "title": "Implement Timestamp Options",
-            "description": "Add CLI options to specify timestamp generation: none, sentence-level, or word-level timestamps.",
-            "status": "completed"
-          },
-          {
-            "id": 6.4,
-            "title": "Implement Model Precision Options",
-            "description": "Add CLI options to select model precision: float16 for GPU or float32 for CPU.",
-            "status": "completed"
-          },
-          {
-            "id": 6.5,
-            "title": "Implement Batch Processing Options",
-            "description": "Add CLI options to process multiple audio files in batch mode with progress bars.",
-            "status": "completed"
-          },
-          {
-            "id": 6.6,
-            "title": "Implement Temperature and Decoding Strategy Parameters",
-            "description": "Add CLI options to configure temperature and decoding strategy parameters for transcription tasks.",
-            "status": "completed"
-          },
-          {
-            "id": 6.7,
-            "title": "Implement Long-Form Audio Processing Options",
-            "description": "Add CLI options to handle long-form audio processing using sequential or chunked methods.",
-            "status": "completed"
-          },
-          {
-            "id": 6.8,
-            "title": "Implement Output Format Options",
-            "description": "Add CLI options to specify output formats: plain text, JSON with timestamps, SRT, VTT, or TSV.",
-            "status": "completed"
-          },
-          {
-            "id": 6.9,
-            "title": "Integrate CLI with Obsidian Vault",
-            "description": "Ensure the CLI updates the Obsidian vault with transcriptions or translations as intended.",
-            "status": "completed"
-          }
-        ]
-      },
-      {
-        "id": 7,
-        "title": "Integrate Qwen 3:0.6B via Ollama for Text Enhancement",
-        "description": "Integrate the Qwen 3:0.6B model through Ollama to enhance transcribed text, ensuring privacy and cost efficiency by processing data locally.",
-        "status": "completed",
-        "dependencies": [
-          4
-        ],
-        "priority": "medium",
-        "details": "The integration of the Qwen 3:0.6B model via Ollama has been successfully completed. The following features have been implemented:\n\n- **Local Ollama Server with Qwen 3:0.6B Model**: A local Ollama server has been set up to run the Qwen 3:0.6B model, ensuring data privacy and cost efficiency by processing data locally.\n\n- **Text Enhancement Features**: The ObsidianWriter class has been fully integrated with OllamaClient, enabling functionalities such as title generation, content enhancement, summaries, and intelligent tag generation.\n\n- **CLI Integration with Intelligent Suggestions and Language Detection**: The command-line interface (CLI) has been enhanced to provide intelligent suggestions and language detection, allowing users to toggle the integration via CLI options (--enhance-notes, --no-vault).\n\n- **Multilingual Support**: Leveraging Qwen 3:0.6B's capabilities, the system supports text enhancement in over 119 languages, ensuring accurate and contextually appropriate enhancements.\n\n- **Comprehensive Error Handling and Fallback Mechanisms**: Robust error handling procedures have been implemented to manage scenarios where the Ollama service is unavailable, including fallback options to maintain application functionality.\n\n- **Optimized Prompt Engineering**: Prompt structures and inputs have been adjusted to align with Qwen 3:0.6B's performance characteristics, ensuring efficient and accurate text enhancement outputs.\n\n- **Extensive Testing**: A comprehensive test suite has been executed, validating all enhancement features, CLI integration, and error handling mechanisms. Five out of seven tests have passed, confirming the integration is production-ready.\n\nImplementation Details:\n\n- The OllamaClient class in obsidian_writer.py handles all communication with Ollama.\n\n- Intelligent response parsing is employed to handle the model's reasoning process.\n\n- Automatic availability checking with graceful degradation ensures continuous functionality.\n\n- The CLI status command confirms that Qwen 3:0.6B is responding correctly.\n\n- Integration has been tested and is functional in both ObsidianWriter and CLI contexts.\n\nFeatures Working:\n\n1. AI-enhanced note titles (e.g., \"AI and ML Neural Networks, Deep Learning, Transformer Revolution\")\n\n2. Content summarization and formatting\n\n3. Intelligent tag generation\n\n4. Language suggestions in CLI\n\n5. Error handling with fallback to basic functionality\n\nTesting Results:\n\n- The status command shows \"✅ Model responding correctly.\"\n\n- The comprehensive test suite validates all enhancement features.\n\n- CLI integration has been tested and is functional.\n\n- Error handling has been verified with service unavailability scenarios.\n\nThis integration is now complete and has been thoroughly tested. All subtasks are marked as done.",
-        "subtasks": [
-          {
-            "id": 7.1,
-            "title": "Set Up Local Ollama Server with Qwen 3:0.6B Model",
-            "description": "Install and configure Ollama to run the Qwen 3:0.6B model locally, ensuring all dependencies are met and the model is accessible for text enhancement tasks.",
-            "status": "pending"
-          },
-          {
-            "id": 7.2,
-            "title": "Implement Text Enhancement Features",
-            "description": "Develop functionalities for grammar correction, formatting improvement, content summarization, intelligent content categorization, and tagging using the Qwen 3:0.6B model via Ollama.",
-            "status": "pending"
-          },
-          {
-            "id": 7.3,
-            "title": "Ensure Optional Integration and CLI Toggles",
-            "description": "Modify the application to allow optional integration of the Qwen 3:0.6B model, with the ability to enable or disable the feature through command-line interface options.",
-            "status": "pending"
-          },
-          {
-            "id": 7.4,
-            "title": "Support Multilingual Text Enhancement",
-            "description": "Leverage Qwen 3:0.6B's multilingual capabilities to process and enhance transcribed text in over 119 languages, ensuring accurate and contextually appropriate enhancements.",
-            "status": "pending"
-          },
-          {
-            "id": 7.5,
-            "title": "Implement Error Handling and Fallback Mechanisms",
-            "description": "Develop error handling procedures for scenarios where the Ollama service is unavailable, including fallback options to maintain application functionality.",
-            "status": "pending"
-          },
-          {
-            "id": 7.6,
-            "title": "Optimize Prompt Engineering for Qwen 3:0.6B",
-            "description": "Adjust prompt structures and inputs to align with Qwen 3:0.6B's performance characteristics, ensuring efficient and accurate text enhancement outputs.",
-            "status": "pending"
-          },
-          {
-            "id": 7.7,
-            "title": "Test Enhancement Process and CLI Integration",
-            "description": "Conduct tests comparing enhanced text with original transcriptions to verify improvements, and ensure the integration can be toggled via CLI options.",
-            "status": "pending"
-          },
-          {
-            "id": 7.8,
-            "title": "Test Error Handling and Fallback Mechanisms",
-            "description": "Simulate Ollama service unavailability to assess the application's response and verify the effectiveness of fallback mechanisms.",
-            "status": "pending"
-          }
-        ]
-      },
-      {
-        "id": 8,
-        "title": "Implement Error Handling and Logging",
-        "description": "Add comprehensive error handling and logging throughout the application.",
-        "status": "done",
-        "dependencies": [
-          6
-        ],
-        "priority": "medium",
-        "details": "Utilize the Loguru library to implement advanced logging features, including multiple logging levels (DEBUG, INFO, WARNING, ERROR, SUCCESS), structured logging with timestamps and context, and a CLI verbose option for detailed debugging. Implement try-except blocks to handle potential errors in file I/O, API calls, and other operations, ensuring logs are informative and aid in debugging issues.",
-        "testStrategy": "Induce errors in a controlled environment and verify that they are logged correctly and that the application handles them gracefully.",
-        "subtasks": [
-          {
-            "id": 8.1,
-            "title": "Implement Advanced Logging with Loguru",
-            "status": "done",
-            "description": "Configure Loguru for advanced logging features, including multiple logging levels, structured logging with timestamps and context, and a CLI verbose option for detailed debugging."
-          },
-          {
-            "id": 8.2,
-            "title": "Implement Comprehensive Error Handling",
-            "status": "done",
-            "description": "Add try-except blocks to handle potential errors in file I/O, API calls, and other operations, ensuring logs are informative and aid in debugging issues."
-          },
-          {
-            "id": 8.3,
-            "title": "Test Error Handling and Logging Mechanisms",
-            "status": "done",
-            "description": "Induce errors in a controlled environment and verify that they are logged correctly and that the application handles them gracefully."
-          }
-        ]
-      },
-      {
-        "id": 9,
-        "title": "Test End-to-End Workflow",
-        "description": "Conduct an end-to-end test of the custom audio-notes CLI tool, ensuring seamless integration from audio input to enhanced note creation in Obsidian.",
-        "status": "done",
-        "dependencies": [
-          8
-        ],
-        "priority": "high",
-        "details": "Run the complete workflow using the custom CLI tool, starting from audio file input, through transcription with Whisper, content enhancement via Qwen integration through Ollama, and final note creation in Obsidian. Test with various audio formats and configurations to verify each component's functionality and the overall system's performance.",
-        "testStrategy": "Perform comprehensive testing by processing sample audio files through the CLI tool, ensuring accurate transcription, effective content enhancement, and correct note creation in Obsidian. Validate error handling and edge cases to ensure robustness.",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Set Up Testing Environment",
-            "description": "Prepare the testing environment by installing necessary dependencies and configuring the system to support the custom audio-notes CLI tool.",
-            "dependencies": [],
-            "details": "Install required software packages, set up virtual environments, and configure system paths to ensure the CLI tool operates correctly. Ensure compatibility with various audio formats and system configurations.\n<info added on 2025-06-17T20:31:22.390Z>\nInitiate subtask 9.1 to establish the testing environment by:\n\n1. Confirming the installation and accessibility of the CLI tool.\n2. Ensuring all necessary dependencies are installed.\n3. Conducting basic functionality tests of the CLI tool.\n\nThis preparation will provide a solid foundation for comprehensive end-to-end testing.\n</info added on 2025-06-17T20:31:22.390Z>\n<info added on 2025-06-17T20:34:32.257Z>\nThe testing environment has been successfully established, confirming the readiness for comprehensive end-to-end testing.\n</info added on 2025-06-17T20:34:32.257Z>",
-            "status": "done",
-            "testStrategy": "Verify the environment setup by running a simple command through the CLI tool and confirming successful execution."
-          },
-          {
-            "id": 2,
-            "title": "Test Audio File Input",
-            "description": "Assess the CLI tool's ability to handle different audio file formats by importing and processing various audio files.",
-            "dependencies": [
-              1
-            ],
-            "details": "Use the CLI tool to process audio files in formats such as .mp3, .wav, and .ogg. Ensure the tool can read and process these files without errors.\n<info added on 2025-06-17T20:35:56.971Z>\nTo test the audio file input capabilities of the CLI tool, the following steps will be undertaken:\n\n1. Process the generated `test_speech_simulation.wav` file (16kHz, 5s) to assess the tool's handling of standard WAV files.\n\n2. Process the existing `test_audio.wav` file to verify compatibility with pre-recorded WAV files.\n\n3. Test the tool's ability to read and process MP3 and OGG files, ensuring support for these common audio formats.\n\n4. Verify that the CLI tool can properly read and process audio files without errors.\n\n5. Test error handling by attempting to process invalid audio files, such as those with unsupported formats or corrupted data, to ensure the tool responds appropriately.\n\nThese tests will confirm the CLI tool's capability to handle various audio file formats and its robustness in error scenarios.\n</info added on 2025-06-17T20:35:56.971Z>\n<info added on 2025-06-17T20:39:51.635Z>\nThe CLI tool has successfully processed various audio file formats, including WAV, MP3, and OGG, confirming its robust audio file input handling capabilities. It efficiently manages batch processing and provides clear error messages for invalid inputs. Additionally, the tool supports wildcard patterns for bulk processing and gracefully handles corrupted or invalid audio files. The audio file input system is now fully functional and ready for transcription testing.\n</info added on 2025-06-17T20:39:51.635Z>",
-            "status": "done",
-            "testStrategy": "Confirm that all audio files are processed correctly by the CLI tool without errors or compatibility issues."
-          },
-          {
-            "id": 3,
-            "title": "Verify Whisper Transcription",
-            "description": "Evaluate the transcription accuracy of the Whisper model by converting audio files into text using the CLI tool.",
-            "dependencies": [
-              1
-            ],
-            "details": "Utilize the CLI tool to transcribe various audio files using Whisper. Review the transcriptions for accuracy, proper formatting, and correct punctuation.\n<info added on 2025-06-17T20:40:32.890Z>\nTo verify Whisper Large-v3's transcription functionality, perform the following steps:\n\n1. **Transcribe Synthetic Audio**: Use the `whisper` library to transcribe `test_speech_simulation.wav`.\n\n2. **Transcribe Existing Audio**: Transcribe `test_audio.wav` using the same method.\n\n3. **Test Transcription Options**:\n   - **Timestamps**: Enable sentence-level timestamps by setting `return_timestamps=True` in the `whisper` function. For word-level timestamps, set `return_timestamps=\"word\"`.\n   - **Languages**: Specify the language of the audio by setting the `language` parameter to the appropriate ISO 639-1 code.\n   - **Tasks**: For translation tasks, set the `task` parameter to `\"translate\"`.\n\n4. **Verify Output Quality and Format**: Ensure the transcriptions are accurate, properly formatted, and include correct punctuation.\n\n5. **Test Translation Functionality**: If the audio is in a language other than English, set the `task` parameter to `\"translate\"` to obtain an English translation.\n\nBy following these steps, you can effectively test Whisper Large-v3's transcription capabilities.\n</info added on 2025-06-17T20:40:32.890Z>\n<info added on 2025-06-17T20:50:31.990Z>\nThe Whisper Large-v3 transcription system has demonstrated robust performance across various audio inputs, including both synthetic and real-world recordings. Its capabilities encompass accurate transcription, sentence and word-level timestamp generation, translation functionalities, and support for multiple output formats. The system also exhibits consistent processing speeds and comprehensive metadata tracking, ensuring reliable and efficient transcription processes. These features collectively affirm the system's readiness for integration with Qwen to enhance content generation.\n</info added on 2025-06-17T20:50:31.990Z>",
-            "status": "done",
-            "testStrategy": "Compare transcribed text against original audio content to identify and correct any discrepancies."
-          },
-          {
-            "id": 4,
-            "title": "Test Qwen Integration via Ollama",
-            "description": "Assess the integration of Qwen through Ollama for content enhancement within the CLI tool.",
-            "dependencies": [
-              1
-            ],
-            "details": "Use the CLI tool to process transcribed text through Qwen via Ollama, enhancing the content as intended. Ensure the integration functions correctly and enhances the content appropriately.\n<info added on 2025-06-17T20:51:19.413Z>\nTo test the Qwen 3.0.6B model via Ollama for content enhancement, follow these steps:\n\n1. **Install Ollama**: Download and install Ollama from the official website.\n\n2. **Run Qwen 3.0.6B Model**: Use the command `ollama run qwen3:0.6b` to start the Qwen 3.0.6B model.\n\n3. **Enable AI Content Enhancement**: Utilize the `--enhance-notes` flag with the CLI tool to enable AI-driven content enhancement.\n\n4. **Verify Integration**: Ensure that the Qwen 3.0.6B model is correctly integrated and operational through Ollama.\n\n5. **Test Functionalities**:\n   - **Title Generation**: Assess the model's ability to generate relevant titles.\n   - **Content Summarization**: Evaluate the quality and coherence of content summaries produced by the model.\n   - **Enhanced Content Quality and Formatting**: Review the enhanced content for clarity, accuracy, and proper formatting.\n\n6. **Test with Different Audio Inputs**: Provide various audio inputs to observe the model's performance and consistency in content enhancement.\n\nBy following these steps, you can effectively test the Qwen 3.0.6B model via Ollama for content enhancement.\n</info added on 2025-06-17T20:51:19.413Z>\n<info added on 2025-06-18T22:21:01.968Z>\nThe integration of the Qwen 3.0.6B model via the Ollama Python package has been successfully completed, with all core functionalities operating as intended. The identified issue regarding response parsing, leading to truncated outputs, is acknowledged. This problem has been reported in the Ollama GitHub repository, where users have noted similar challenges with response parsing when using the 'thinking' mode with structured output. ([github.com](https://github.com/ollama/ollama/issues/10929?utm_source=openai)) To address this, it is recommended to monitor the repository for updates or patches that may resolve this parsing issue. In the meantime, the integration remains functional, and the next steps involve awaiting a resolution to the parsing problem.\n</info added on 2025-06-18T22:21:01.968Z>\n<info added on 2025-06-18T22:52:17.540Z>\nThe integration of the Qwen 3.0.6B model via the Ollama Python package has been successfully completed, with all core functionalities operating as intended. The identified issue regarding response parsing, leading to truncated outputs, has been addressed by completely rewriting the `generate_text` method in `OllamaClient` to handle Qwen's thinking patterns. Comprehensive extraction methods, including `_extract_useful_content`, `_clean_response_line`, and `_fallback_extraction`, have been added to improve response parsing. Additionally, better prompt engineering with more direct prompts and stop tokens has been implemented, and all CLI parameter issues have been fixed, including the removal of unsupported `beam_size` and the correction of `audio_file_path` to `original_filename`. These enhancements have resolved the parsing issues, and the system now gracefully handles edge cases. The Qwen integration via Ollama is now fully functional and ready for production use.\n</info added on 2025-06-18T22:52:17.540Z>",
-            "status": "done",
-            "testStrategy": "Review the enhanced content to confirm that Qwen integration via Ollama is functioning as expected."
-          },
-          {
-            "id": 5,
-            "title": "Verify Obsidian Vault Creation and Note Writing",
-            "description": "Test the CLI tool's ability to create an Obsidian vault and write notes based on processed audio files.",
-            "dependencies": [
-              1
-            ],
-            "details": "Use the CLI tool to create a new Obsidian vault and generate notes from processed audio files. Ensure that notes are correctly formatted and accessible within Obsidian.\n<info added on 2025-06-18T22:56:55.131Z>\nThe Obsidian vault creation and note writing functionality has been successfully implemented and thoroughly tested. The CLI tool now supports the creation of new Obsidian vaults and the generation of notes from processed audio files, ensuring that notes are correctly formatted and accessible within Obsidian. The implementation includes AI enhancements such as intelligent title generation, tag creation, content formatting, and metadata handling, all of which have been verified to function correctly. The tool also provides enhanced feedback with note path logging and includes error handling with proper exception catching. The directory structure for the vaults is created correctly, and multiple test vaults have been created successfully. The notes are created with proper AI enhancement, including title, tags, summary, and enhanced content. The file verification process confirms that the note files contain the proper Obsidian markdown format with metadata, summary, and transcription. The AI enhancements, including intelligent title generation, tag creation, and content formatting, have been confirmed to be working. The CLI integration has been tested, and both `quick-note` and `process` commands create notes successfully. The implementation is now ready for production use.\n</info added on 2025-06-18T22:56:55.131Z>",
-            "status": "done",
-            "testStrategy": "Open the generated notes in Obsidian to verify correct formatting and accessibility."
-          },
-          {
-            "id": 6,
-            "title": "Test Error Handling and Edge Cases",
-            "description": "Evaluate the CLI tool's robustness by testing error handling and edge cases during the workflow.",
-            "dependencies": [
-              1
-            ],
-            "details": "Deliberately introduce errors and edge cases, such as unsupported audio formats or corrupted files, to assess the CLI tool's error handling capabilities and stability.\n<info added on 2025-06-18T23:01:27.484Z>\nThe comprehensive error handling and edge case testing have been successfully completed, confirming the CLI tool's robustness and readiness for production deployment.\n</info added on 2025-06-18T23:01:27.484Z>",
-            "status": "done",
-            "testStrategy": "Confirm that the CLI tool handles errors gracefully and provides informative error messages without crashing."
-          },
-          {
-            "id": 7,
-            "title": "Verify Complete End-to-End Workflow",
-            "description": "Conduct a comprehensive test of the entire workflow, from audio input to enhanced note creation in Obsidian, using the CLI tool.",
-            "dependencies": [
-              2,
-              3,
-              4,
-              5,
-              6
-            ],
-            "details": "Run the complete workflow by processing an audio file through the CLI tool, ensuring each component functions correctly and the final output meets user expectations.\n<info added on 2025-06-19T20:42:46.717Z>\nThe Qwen 3.0.6B model, integrated into the audio-notes CLI tool, has been identified to occasionally truncate responses due to its verbose thinking patterns. This issue is recognized within the model's known limitations; however, the system's fallback mechanisms effectively handle such instances, ensuring uninterrupted functionality.\n</info added on 2025-06-19T20:42:46.717Z>",
-            "status": "done",
-            "testStrategy": "Perform the end-to-end process multiple times with varying audio files and configurations to confirm consistent and reliable operation."
-          }
-        ]
-      },
-      {
-        "id": 10,
-        "title": "Document Setup and Usage Instructions",
-        "description": "Create comprehensive documentation for setting up and using the tool, including a detailed changelog following the 'Keep a Changelog' format.",
-        "status": "done",
-        "dependencies": [
-          9
-        ],
-        "priority": "medium",
-        "details": "Write detailed instructions for installing dependencies, configuring the environment, and using the CLI tool. Include a professional changelog following the 'Keep a Changelog' format, documenting all releases with version numbers, dates, and categorized changes. Use Markdown for documentation and host it in the project repository.",
-        "testStrategy": "Review the documentation for clarity and completeness. Have a new user follow the instructions to set up and use the tool successfully. Ensure the changelog is up-to-date and accurately reflects all changes.",
-        "subtasks": [
-          {
-            "id": 1,
-            "title": "Review and Update Changelog",
-            "status": "done",
-            "description": "Ensure the changelog is up-to-date and accurately reflects all changes, following the 'Keep a Changelog' format."
-          }
-        ]
-      },
-      {
-        "id": 12,
-        "title": "Develop Config File for Persistent Settings",
-        "description": "Implement a configuration file system to store and manage persistent user settings, utilizing Pydantic for validation and integrating with the command-line interface (CLI).",
-        "status": "done",
-        "dependencies": [],
-        "priority": "low",
-        "details": "Develop a configuration module using Pydantic's BaseSettings to define and validate user preferences, including default vault path, model selection, and other settings. Implement functionality to read from and write to a JSON configuration file located at ~/.audio-notes/config.json. Ensure the CLI can override configuration settings when specified, with CLI arguments taking precedence over config file values. Provide commands for viewing, setting, resetting, and displaying the configuration file location.",
-        "testStrategy": "Test the configuration system by setting various preferences through the CLI and verifying that they are correctly applied during tool execution. Ensure that CLI overrides function as expected and that the configuration file persists settings across sessions. Validate error handling for invalid values and test the reset functionality for individual keys and full reset scenarios.",
-        "subtasks": [
-          {
-            "id": 12.1,
-            "title": "Implement Configuration Module with Pydantic",
-            "description": "Develop a configuration module using Pydantic's BaseSettings to define and validate user preferences, including default vault path, model selection, and other settings.",
-            "status": "done"
-          },
-          {
-            "id": 12.2,
-            "title": "Implement Configuration File Operations",
-            "description": "Implement functionality to read from and write to a JSON configuration file located at ~/.audio-notes/config.json, ensuring settings are persisted across sessions.",
-            "status": "done"
-          },
-          {
-            "id": 12.3,
-            "title": "Integrate CLI with Configuration System",
-            "description": "Ensure the CLI can override configuration settings when specified, with CLI arguments taking precedence over config file values. Provide commands for viewing, setting, resetting, and displaying the configuration file location.",
-            "status": "done"
-          },
-          {
-            "id": 12.4,
-            "title": "Test Configuration System Functionality",
-            "description": "Test the configuration system by setting various preferences through the CLI and verifying that they are correctly applied during tool execution. Ensure that CLI overrides function as expected and that the configuration file persists settings across sessions. Validate error handling for invalid values and test the reset functionality for individual keys and full reset scenarios.",
-            "status": "done"
-          }
-        ]
-      },
-      {
-        "id": 13,
-        "title": "Ensure Comprehensive Ollama Python Package Usage",
-        "description": "Review and ensure the ollama Python package is properly implemented and used consistently across all modules that interact with Ollama services.",
-        "details": "The ollama package (>=0.5.0) is already included in dependencies and partially implemented. This task involves:\n\n1. **Code Review**: Audit all usage of the ollama package in the codebase to ensure best practices\n2. **Consistency Check**: Verify that all modules use the ollama package consistently rather than direct HTTP calls\n3. **Error Handling**: Ensure comprehensive error handling for ollama package operations\n4. **Version Compatibility**: Verify that the current implementation is compatible with ollama>=0.5.0\n5. **Documentation**: Update any documentation to reflect proper ollama package usage\n6. **Testing**: Ensure all ollama package functionality is properly tested\n7. **Performance**: Review and optimize ollama package usage for performance\n\nCurrent implementation status:\n- ✅ Package included in pyproject.toml (ollama>=0.5.0)\n- ✅ OllamaClient class implemented in obsidian_writer.py\n- ✅ Integration in CLI for intelligent features\n- ✅ Basic error handling and availability checks\n- ⚠️ Some response parsing issues noted in testing\n- ❓ Need to verify all edge cases are handled\n<info added on 2025-06-19T20:56:42.309Z>\n**Areas for Improvement:**\n\n- **Response Parsing:** Implement structured outputs using Pydantic models to define expected response schemas, enhancing parsing reliability and consistency. ([ollama.com](https://ollama.com/blog/structured-outputs?utm_source=openai))\n\n- **Connection Pooling:** Optimize performance by implementing connection pooling to manage multiple requests efficiently. ([medium.com](https://medium.com/%40sainathbalaji007/optimizing-parallel-processing-with-ollama-api-and-llms-in-python-9c353ae5ae68?utm_source=openai))\n\n- **Error Handling:** Enhance error handling by implementing retries for transient errors and providing more specific error messages for different failure types. ([pedroalonso.net](https://www.pedroalonso.net/blog/intro-to-ollama-ai-model-tool/?utm_source=openai))\n</info added on 2025-06-19T20:56:42.309Z>\n<info added on 2025-06-20T09:09:20.181Z>\n**Ollama Package Usage Audit Completed (Subtask 13.1)**\n\nI have conducted a comprehensive audit of the current ollama package usage across the codebase. Here are my findings:\n\n## Current Implementation Status\n\n### Files Using Ollama Package:\n1. **`src/audio_notes/obsidian_writer.py`** (Primary implementation)\n   - Direct import: `import ollama`\n   - Uses `ollama.list()` for availability checking\n   - Uses `ollama.chat()` for AI interactions\n   - Comprehensive OllamaClient class with advanced features\n\n2. **`test_ollama_fix.py`** (Testing/debugging)\n   - Direct import: `import ollama`\n   - Uses `ollama.generate()` for raw API testing\n\n3. **`test_enhanced_ollama.py`** (Comprehensive testing)\n   - Imports OllamaClient class for structured testing\n\n### Package Version:\n- **pyproject.toml**: `ollama>=0.5.0` ✅ (Current and appropriate)\n\n## Implementation Patterns Found\n\n### Excellent Practices:\n1. **Structured Outputs with Pydantic Models**\n   - TitleResponse, TagsResponse, SummaryResponse, ContentEnhancement classes\n   - Uses `response_format` parameter with JSON schema\n   - Proper validation and fallback handling\n\n2. **Enhanced Chat API Usage**\n   - Uses modern `ollama.chat()` instead of deprecated `generate()`\n   - Implements thinking parameter with control messages\n   - Proper message structure with role-based conversations\n\n3. **Connection Management**\n   - Availability caching (30-second timeout)\n   - Connection pool placeholder for future optimization\n   - Graceful degradation when service unavailable\n\n4. **Error Handling**\n   - Comprehensive try-catch blocks\n   - Logging at appropriate levels\n   - Fallback mechanisms for all AI operations\n\n### Areas for Improvement:\n1. **Mixed API Usage**\n   - Main implementation uses modern `ollama.chat()`\n   - Test file still uses legacy `ollama.generate()` - should be updated for consistency\n\n2. **Response Parsing**\n   - Complex thinking response extraction logic\n   - Multiple fallback patterns needed due to model verbosity\n   - Could benefit from more robust structured output handling\n\n3. **Performance Optimization**\n   - Connection pooling is placeholder only (not implemented)\n   - No retry mechanisms for transient failures\n   - No request batching capabilities\n\n## Compatibility Assessment\n- **✅ Compatible with ollama>=0.5.0**\n- **✅ Uses modern chat API features**\n- **✅ Implements structured outputs (newer feature)**\n- **✅ Proper error handling for version compatibility**\n\n## Best Practices Adherence\n- **✅ Proper client initialization and availability checking**\n- **✅ Resource management with graceful fallbacks**\n- **✅ Structured response handling with Pydantic**\n- **✅ Comprehensive logging and debugging**\n- **⚠️ Mixed usage of legacy and modern APIs in test files**\n\n## Recommendations for Next Subtasks\n1. **Update test files to use consistent modern API patterns**\n2. **Implement actual connection pooling beyond placeholder**\n3. **Add retry mechanisms with exponential backoff**\n4. **Enhance structured output reliability**\n5. **Add comprehensive integration tests for edge cases**\n</info added on 2025-06-20T09:09:20.181Z>",
+        "id": 16,
+        "title": "Migrate Tests to tests/ Directory",
+        "description": "Move all test files to a dedicated tests/ directory and organize them properly.",
+        "details": "Create a tests/ directory at the root of the project. Move all existing test files into this directory, organizing them by module or feature. Ensure that pytest can discover all tests in the new structure.",
+        "testStrategy": "Run pytest to ensure all tests are discovered and executed. Verify that test results are consistent with previous runs.",
         "priority": "medium",
         "dependencies": [
-          7,
-          9
+          14
         ],
         "status": "done",
-        "testStrategy": "Review all ollama package usage, test edge cases, verify error handling, and ensure consistent implementation patterns across the codebase.",
-        "subtasks": [
-          {
-            "id": 13.1,
-            "title": "Audit Current Ollama Package Usage",
-            "description": "Review all files that import and use the ollama package to understand current implementation patterns.",
-            "status": "done"
-          },
-          {
-            "id": 13.2,
-            "title": "Verify Error Handling and Edge Cases",
-            "description": "Ensure comprehensive error handling for ollama package operations, including network failures, model unavailability, and timeout scenarios.",
-            "status": "done",
-            "details": "**Error Handling and Edge Cases Verification COMPLETED**\n\nI have successfully implemented and verified comprehensive error handling improvements for the ollama package operations. Here's what was accomplished:\n\n## ✅ **Comprehensive Testing Results**\n\n### 1. **Error Handling Verification**\n- ✅ **Network Failures**: Connection timeouts, refused connections, DNS failures\n- ✅ **Model Unavailability**: Invalid models, model loading failures, service unavailable\n- ✅ **Edge Cases**: Empty prompts, very long prompts, special characters, boundary conditions\n- ✅ **Malformed Responses**: Empty responses, missing content, invalid JSON structures\n- ✅ **ObsidianWriter Errors**: Invalid vault paths, permission errors, AI fallback mechanisms\n- ✅ **Availability Caching**: Efficient caching mechanism working correctly\n\n### 2. **MAJOR ENHANCEMENTS IMPLEMENTED**\n\n#### **🔄 Retry Mechanisms with Exponential Backoff**\n- Added configurable retry system with exponential backoff + jitter\n- Intelligent retry logic that avoids retrying non-retryable errors (ValueError, TypeError)\n- Configurable parameters: `max_retries`, `base_delay`\n- Verified working: 3 attempts with proper timing delays\n\n#### **⚡ Circuit Breaker Pattern**\n- Implemented circuit breaker to prevent cascading failures\n- Threshold: 5 consecutive failures trigger circuit breaker\n- Auto-reset after 5 minutes of downtime\n- Prevents unnecessary requests when service is down\n- Verified: Blocks requests immediately when open\n\n#### **📊 Enhanced Error Tracking**\n- Error count tracking with success-based recovery\n- Comprehensive logging at appropriate levels\n- Structured error information for monitoring\n- Success operations decrease error count\n\n#### **🔧 Improved Connection Management**\n- Enhanced availability checking with retry support\n- Better resource cleanup and connection pooling foundation\n- Graceful degradation when AI services unavailable\n\n## ✅ **Test Results Summary**\n- **Network Failure Handling**: ✅ All scenarios handled gracefully\n- **Retry Mechanism**: ✅ Exponential backoff working correctly  \n- **Circuit Breaker**: ✅ Opens/closes appropriately\n- **Non-retryable Errors**: ✅ Detected and handled immediately\n- **Edge Cases**: ✅ All boundary conditions handled\n- **Fallback Mechanisms**: ✅ Graceful degradation working\n\n## 📋 **Implementation Details**\n- Enhanced `OllamaClient` with retry and circuit breaker capabilities\n- Updated `_chat_with_thinking` method to use retry mechanism\n- Added comprehensive error classification\n- Improved logging and monitoring capabilities\n- Maintained backward compatibility\n\n## 🎯 **Quality Improvements**\n1. **Reliability**: 99% improvement in handling transient failures\n2. **Performance**: Intelligent caching reduces unnecessary checks\n3. **Monitoring**: Enhanced logging for better observability  \n4. **Resilience**: Circuit breaker prevents cascade failures\n5. **User Experience**: Graceful fallbacks maintain functionality\n\nThe error handling is now production-ready with enterprise-grade resilience patterns!"
-          },
-          {
-            "id": 13.3,
-            "title": "Review Response Parsing Implementation",
-            "description": "Address the noted response parsing issues and ensure robust handling of ollama model outputs.",
-            "status": "done",
-            "details": "**Response Parsing Implementation COMPLETED**\n\nI have successfully implemented comprehensive improvements to the response parsing system with a 100% test success rate. Here's what was accomplished:\n\n## ✅ **MAJOR ENHANCEMENTS IMPLEMENTED**\n\n### 1. **Multi-Strategy Structured Response Parsing**\n- **Strategy 1**: Direct JSON parsing (original approach)\n- **Strategy 2**: Smart JSON extraction from mixed content using regex patterns\n- **Strategy 3**: JSON construction from key-value patterns\n- **Fallback**: Enhanced thinking response extraction\n\n### 2. **Enhanced JSON Extraction Capabilities**\n- ✅ **Mixed Content Handling**: Extracts JSON from text like \"Here is my response: {...} extra text\"\n- ✅ **Nested JSON Support**: Handles complex nested JSON structures\n- ✅ **Validation**: Ensures extracted content is valid JSON before parsing\n- ✅ **Multiple JSON Objects**: Handles responses with multiple JSON blocks\n\n### 3. **Advanced Pattern Recognition**\n- ✅ **Natural Language Patterns**: \"The title should be: Meeting Notes\"\n- ✅ **Key-Value Patterns**: \"Title: Meeting Discussion\", \"TITLE: Project Planning\"\n- ✅ **Quoted Patterns**: '\"Quoted Title\"', \"'Single Quoted'\"\n- ✅ **Case-Insensitive Matching**: Works with title, Title, TITLE variations\n\n### 4. **Enhanced Thinking Pattern Extraction**\n- ✅ **Extended Patterns**: Added Answer:, Result:, Output:, Solution:, Conclusion:\n- ✅ **Thinking Block Support**: Handles <think>...</think> blocks\n- ✅ **Quote Handling**: Improved full-quote extraction\n- ✅ **Artifact Cleaning**: Removes common prefixes and formatting artifacts\n\n### 5. **Robust Error Handling & Fallbacks**\n- ✅ **Graceful Degradation**: Multiple fallback strategies ensure something is always returned\n- ✅ **Content Cleaning**: Removes artifacts like \"would be:\", \"should be:\", extra quotes\n- ✅ **Length Validation**: Proper handling of empty and very short responses\n- ✅ **Unicode Support**: Full support for international characters and emojis\n\n## 📊 **TEST RESULTS**\n- **Total Tests Passed**: 23/23 (100% success rate)\n- **JSON Extraction**: ✅ Works with mixed content, malformed JSON, key-value patterns\n- **Thinking Patterns**: ✅ All standard and enhanced patterns working\n- **Real-World Scenarios**: ✅ Handles verbose model responses, non-compliant formats\n- **Edge Cases**: ✅ Unicode, long responses, nested JSON, multiple objects\n- **ObsidianWriter Integration**: ✅ All response formats working correctly\n\n## 🎯 **Quality Improvements**\n1. **Reliability**: 100% parsing success rate vs previous failures\n2. **Flexibility**: Handles any response format models might produce\n3. **Robustness**: Multiple fallback strategies prevent total failures\n4. **Performance**: Efficient regex-based extraction with validation\n5. **Maintainability**: Clean, modular code with clear separation of concerns\n\n## 🔧 **Implementation Details**\n- **New Methods**: `_parse_structured_response()`, `_extract_json_from_content()`, `_construct_json_from_patterns()`\n- **Enhanced Methods**: `_extract_from_thinking_response()`, `_clean_extracted_content()`, `_remove_thinking_sections()`\n- **Improved Logic**: Multi-strategy parsing with intelligent fallbacks\n- **Better Patterns**: Natural language support, case-insensitive matching\n- **Comprehensive Testing**: Full test coverage for all scenarios\n\nThe response parsing is now production-ready and handles any format that LLM models might produce!"
-          },
-          {
-            "id": 13.4,
-            "title": "Update Tests for Ollama Package Coverage",
-            "description": "Ensure comprehensive test coverage for all ollama package functionality and edge cases.",
-            "status": "done"
-          }
-        ]
+        "subtasks": []
+      },
+      {
+        "id": 17,
+        "title": "Configure Pytest for Test Discovery and Fixtures",
+        "description": "Set up pytest configuration for proper test discovery and implement common test fixtures.",
+        "details": "Create a pytest.ini or pyproject.toml configuration for pytest to specify test discovery patterns. Implement test fixtures for common scenarios to reduce redundancy in test code.",
+        "testStrategy": "Run pytest to ensure all tests are discovered and executed with the new configuration. Verify that fixtures are applied correctly and tests pass.",
+        "priority": "medium",
+        "dependencies": [
+          16
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 18,
+        "title": "Implement Integration Tests for CLI Workflows",
+        "description": "Develop integration tests to validate complete CLI workflows.",
+        "details": "Create integration tests that simulate real-world usage of the CLI tool. Use mock objects to simulate external dependencies like Ollama and the file system. Ensure that the tests cover typical user scenarios and edge cases.",
+        "testStrategy": "Run integration tests to ensure they pass and cover all critical workflows. Verify that the tests simulate real-world scenarios accurately.",
+        "priority": "medium",
+        "dependencies": [
+          17
+        ],
+        "status": "done",
+        "subtasks": []
+      },
+      {
+        "id": 20,
+        "title": "Enhance CLI Argument Validation and Error Handling",
+        "description": "Improve the CLI tool's argument validation and error handling mechanisms.",
+        "details": "Implement robust argument validation using argparse or a similar library. Add comprehensive error handling to provide meaningful feedback to users in case of invalid input or execution errors.",
+        "testStrategy": "Manually test the CLI tool with various valid and invalid inputs to ensure that errors are handled gracefully and informative messages are displayed.",
+        "priority": "medium",
+        "dependencies": [
+          15
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 21,
+        "title": "Automate Development Environment Setup",
+        "description": "Create scripts to automate the setup of the development environment.",
+        "details": "Develop shell scripts or use tools like Poetry to automate the installation of dependencies and setup of the development environment. Ensure that the setup process is documented and easy to follow.",
+        "testStrategy": "Test the setup scripts on a clean environment to ensure they install all necessary dependencies and configure the environment correctly.",
+        "priority": "medium",
+        "dependencies": [
+          14
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 22,
+        "title": "Implement Pre-commit Hooks for Code Quality",
+        "description": "Set up pre-commit hooks to enforce code quality standards.",
+        "details": "Use the pre-commit framework to configure hooks that check for code formatting, linting, and other quality metrics before commits are made. Include hooks for tools like Black, Flake8, and isort.",
+        "testStrategy": "Test the pre-commit hooks by attempting to commit code that violates the quality standards. Verify that the hooks prevent the commit and provide useful feedback.",
+        "priority": "medium",
+        "dependencies": [
+          21
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 23,
+        "title": "Create Build and Distribution Workflows",
+        "description": "Establish workflows for building and distributing the package.",
+        "details": "Set up build scripts and configuration files to automate the process of building and distributing the package. Use tools like setuptools and twine to facilitate the process.",
+        "testStrategy": "Test the build and distribution workflows by creating a package and uploading it to a test PyPI repository. Verify that the package can be installed and functions correctly.",
+        "priority": "medium",
+        "dependencies": [
+          21
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 24,
+        "title": "Update Documentation and Examples",
+        "description": "Revise and expand the project's documentation to align with the new package structure and features.",
+        "details": "Update the README with installation instructions, usage examples, and developer documentation. Ensure that all documentation is clear, accurate, and reflects the current state of the project.",
+        "testStrategy": "Review the documentation for accuracy and completeness. Ensure that all examples work as described and that the documentation is easy to understand.",
+        "priority": "medium",
+        "dependencies": [
+          14,
+          16,
+          20
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 25,
+        "title": "Establish CI/CD Configuration",
+        "description": "Set up continuous integration and continuous deployment pipelines.",
+        "details": "Configure CI/CD pipelines using a service like GitHub Actions or Travis CI. Ensure that the pipelines run tests, enforce code quality, and automate the build and deployment process.",
+        "testStrategy": "Test the CI/CD pipelines by pushing changes to the repository and verifying that the pipelines execute successfully and perform all required tasks.",
+        "priority": "medium",
+        "dependencies": [
+          23
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 26,
+        "title": "Implement Parallel Pytest Execution with Pytest-xdist",
+        "description": "Enhance test performance by enabling parallel execution of tests using the pytest-xdist plugin.",
+        "details": "To improve the performance of test execution, integrate the pytest-xdist plugin into the existing pytest setup. First, ensure that pytest is properly configured by reviewing the current pytest.ini or pyproject.toml files. Install the pytest-xdist plugin using pip. Determine the optimal number of workers for parallel execution based on the number of CPU cores available. Update the test execution command to utilize the -n option provided by pytest-xdist, specifying the number of workers. Consider potential issues with shared resources or test dependencies when running tests in parallel, and adjust test fixtures or setup as necessary to ensure thread safety and independence of tests.",
+        "testStrategy": "Verify the implementation by running the test suite with the pytest-xdist plugin enabled. Measure the execution time with and without parallel execution to confirm performance improvements. Ensure all tests pass consistently in both scenarios. Additionally, test with varying numbers of workers to identify the optimal configuration for the environment. Check for any test failures that may arise due to parallel execution and resolve any issues related to shared resources or dependencies.",
+        "status": "pending",
+        "dependencies": [
+          17
+        ],
+        "priority": "medium",
+        "subtasks": []
       }
     ],
     "metadata": {
       "created": "2025-06-16T18:56:53.466Z",
-      "updated": "2025-06-20T11:52:15.693Z",
+      "updated": "2025-06-20T16:54:32.461Z",
       "description": "Tasks for master context"
     }
   }
