@@ -2,7 +2,7 @@
   "models": {
     "main": {
       "provider": "openai",
-      "modelId": "gpt-4-1-mini",
+      "modelId": "gpt-4o",
       "maxTokens": 120000,
       "temperature": 0.2
     },
@@ -14,7 +14,7 @@
     },
     "fallback": {
       "provider": "openai",
-      "modelId": "gpt-4o-mini",
+      "modelId": "o4-mini",
       "maxTokens": 120000,
       "temperature": 0.1
     }

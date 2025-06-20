@@ -161,12 +161,6 @@ dev = [
     { name = "pytest-cov" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "ipykernel" },
-    { name = "jupyter" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "accelerate", specifier = ">=1.7.0" },
@@ -195,8 +189,10 @@ provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "coverage", specifier = ">=7.9.1" },
     { name = "ipykernel", specifier = ">=6.0.0" },
     { name = "jupyter", specifier = ">=1.0.0" },
+    { name = "pytest-cov", specifier = ">=6.2.1" },
 ]
 
 [[package]]

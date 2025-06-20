@@ -8,11 +8,7 @@ Verifies all implemented functionality for Task 12:
 - Configuration management commands
 """
 
-import sys
 from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 def test_complete_config_system():
     """Test the complete configuration system implementation"""
