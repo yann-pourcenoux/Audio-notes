@@ -12,180 +12,171 @@ import re
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import ollama
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
+# Pydantic models for structured outputs
+class TitleResponse(BaseModel):
+    """Structured response for title generation."""
+    title: str = Field(..., description="A concise title (max 8 words)", max_length=100)
+    reasoning: Optional[str] = Field(None, description="Brief reasoning for the title choice")
+
+
+class TagsResponse(BaseModel):
+    """Structured response for tag generation."""
+    tags: List[str] = Field(..., description="List of 3-5 relevant tags", min_items=1, max_items=5)
+    reasoning: Optional[str] = Field(None, description="Brief reasoning for tag choices")
+
+
+class SummaryResponse(BaseModel):
+    """Structured response for summary generation."""
+    summary: str = Field(..., description="A concise 1-2 sentence summary", max_length=200)
+    key_topics: Optional[List[str]] = Field(None, description="Key topics discussed")
+
+
+class ContentEnhancement(BaseModel):
+    """Structured response for content enhancement."""
+    enhanced_content: str = Field(..., description="Enhanced and formatted content")
+    improvements_made: Optional[List[str]] = Field(None, description="List of improvements applied")
+
+
 class OllamaClient:
-    """Client for interacting with Ollama API to use Qwen 3:0.6B model."""
+    """Enhanced client for interacting with Ollama API using latest features."""
     
     def __init__(self, model: str = "qwen3:0.6b"):
         self.model = model
+        self._connection_pool = {}  # Simple connection pooling
+        self._last_availability_check = None
+        self._availability_cache_timeout = 30  # seconds
         
     def is_available(self) -> bool:
-        """Check if Ollama service is available."""
+        """Check if Ollama service is available with caching."""
+        current_time = datetime.now().timestamp()
+        
+        # Use cached result if available and recent
+        if (self._last_availability_check and 
+            current_time - self._last_availability_check < self._availability_cache_timeout):
+            return hasattr(self, '_cached_availability') and self._cached_availability
+        
         try:
             # Try to list models to check if Ollama is running
             models = ollama.list()
+            self._cached_availability = True
+            self._last_availability_check = current_time
             return True
-        except Exception:
+        except Exception as e:
+            logger.debug(f"Ollama availability check failed: {e}")
+            self._cached_availability = False
+            self._last_availability_check = current_time
             return False
     
-    def generate_text(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> Optional[str]:
-        """Generate text using Qwen 3:0.6B model via Ollama."""
+    def _chat_with_thinking(self, messages: List[Dict], 
+                           response_format: Optional[BaseModel] = None,
+                           max_tokens: int = 500, 
+                           temperature: float = 0.7) -> Optional[Union[str, BaseModel]]:
+        """Enhanced chat method using thinking parameter and structured outputs."""
         if not self.is_available():
             logger.warning("Ollama service is not available")
             return None
             
         try:
-            # Use more direct prompting to reduce thinking patterns
-            # Add clear instruction to be concise
-            direct_prompt = f"Answer concisely and directly. {prompt}"
+            # Add thinking control message for better reasoning
+            enhanced_messages = [
+                {'role': 'control', 'content': 'thinking'},
+                *messages
+            ]
             
-            response = ollama.generate(
-                model=self.model,
-                prompt=direct_prompt,
-                options={
-                    "temperature": temperature,
-                    "num_predict": max_tokens,
-                    "stop": ["</think>", "\n\n"]  # Stop at end of thinking or double newline
+            # Prepare chat options
+            chat_options = {
+                'model': self.model,
+                'messages': enhanced_messages,
+                'options': {
+                    'temperature': temperature,
+                    'num_predict': max_tokens,
                 }
-            )
+            }
             
-            raw_response = response.get("response", "").strip()
+            # Add structured output format if provided
+            if response_format:
+                chat_options['format'] = response_format.model_json_schema()
             
-            if not raw_response:
+            # Make the chat request
+            response = ollama.chat(**chat_options)
+            
+            if not response or not response.get('message', {}).get('content'):
+                logger.warning("Empty response from Ollama")
                 return None
-                
-            # Handle various response patterns
-            cleaned_response = self._extract_useful_content(raw_response)
             
-            if cleaned_response and len(cleaned_response.strip()) > 2:
-                return cleaned_response.strip()
+            content = response['message']['content'].strip()
             
-            # If extraction failed, try fallback approach
-            return self._fallback_extraction(raw_response)
+            # Parse structured response if format was specified
+            if response_format:
+                try:
+                    return response_format.model_validate_json(content)
+                except Exception as e:
+                    logger.warning(f"Failed to parse structured response: {e}")
+                    # Fallback to extracting useful content from raw response
+                    return self._extract_from_thinking_response(content)
+            
+            # For unstructured responses, extract useful content
+            return self._extract_from_thinking_response(content)
             
         except Exception as e:
             logger.error(f"Error communicating with Ollama: {e}")
             return None
     
-    def _extract_useful_content(self, raw_response: str) -> Optional[str]:
-        """Extract useful content from Qwen's response, handling various patterns."""
+    def _extract_from_thinking_response(self, content: str) -> Optional[str]:
+        """Extract useful content from thinking-enabled responses."""
+        if not content:
+            return None
         
-        # Pattern 1: Complete <think>...</think> blocks
-        if '<think>' in raw_response and '</think>' in raw_response:
-            # Extract content after </think>
-            after_think = raw_response.split('</think>', 1)[-1].strip()
-            if after_think and len(after_think) > 3:
-                return self._clean_response_line(after_think)
+        # Look for structured thinking patterns
+        patterns = [
+            r"Here is my response:\s*(.+)",
+            r"My answer:\s*(.+)",
+            r"Response:\s*(.+)",
+            r"Final answer:\s*(.+)",
+        ]
         
-        # Pattern 2: Incomplete <think> blocks (truncated responses)
-        if raw_response.startswith('<think>'):
-            # Look for quoted content within the thinking
-            quotes = re.findall(r'"([^"]{3,100})"', raw_response)
-            if quotes:
-                # Return the longest reasonable quote
-                best_quote = max(quotes, key=len) if quotes else None
-                if best_quote and len(best_quote) > 3:
-                    return best_quote.strip()
-            
-            # Look for title-like content after colons
-            title_patterns = [
-                r'title[:\s]+([^\n.]{5,50})',
-                r'answer[:\s]+([^\n.]{3,50})',
-                r'result[:\s]+([^\n.]{3,50})',
-                r'summary[:\s]+([^\n.]{10,100})',
-                r'tags?[:\s]+([^\n.]{5,80})'
-            ]
-            
-            for pattern in title_patterns:
-                match = re.search(pattern, raw_response, re.IGNORECASE)
-                if match:
-                    result = match.group(1).strip()
-                    if result and not result.lower().startswith(('the ', 'this ', 'that ', 'i ', 'let me')):
-                        return result
-            
-            # Look for any direct statements (not reasoning)
-            lines = raw_response.split('\n')
-            for line in lines:
-                line = line.strip()
-                # Skip reasoning phrases and look for direct answers
-                if (line and len(line) > 5 and 
-                    not any(phrase in line.lower() for phrase in [
-                        'let me', 'i need', 'the user', 'okay', 'hmm', 'so i',
-                        'i should', 'i think', 'maybe', 'perhaps', 'considering',
-                        'first', 'second', 'then', 'next', 'also', 'however'
-                    ])):
-                    
-                    # Look for lines that seem like answers
-                    if ('"' in line or 
-                        line.endswith('.') or line.endswith('!') or
-                        any(word in line.lower() for word in ['ai', 'ml', 'machine', 'learning', 'discussion', 'note'])):
-                        
-                        # Extract quoted content if present
-                        quote_match = re.search(r'"([^"]+)"', line)
-                        if quote_match:
-                            return quote_match.group(1).strip()
-                        
-                        # Or return the line if it looks like a direct answer
-                        cleaned = self._clean_response_line(line)
-                        if cleaned and len(cleaned) > 3:
-                            return cleaned
+        for pattern in patterns:
+            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+            if match:
+                extracted = match.group(1).strip()
+                if len(extracted) > 3:
+                    return extracted
         
-        # Pattern 3: Direct responses without thinking tags
-        else:
-            return self._clean_response_line(raw_response)
+        # Fallback: look for content after thinking section
+        thinking_end_patterns = [
+            r"Here is my thought process:.*?(?=Here is my response:|My answer:|Response:|$)",
+            r"Let me think.*?(?=Here is my response:|My answer:|Response:|$)",
+        ]
+        
+        for pattern in thinking_end_patterns:
+            content = re.sub(pattern, "", content, flags=re.DOTALL | re.IGNORECASE)
+        
+        # Clean up and return
+        content = content.strip()
+        if len(content) > 3:
+            return content
         
         return None
     
-    def _clean_response_line(self, line: str) -> Optional[str]:
-        """Clean a response line to extract useful content."""
-        if not line:
-            return None
-            
-        # Remove common prefixes
-        line = re.sub(r'^(answer[:\s]*|result[:\s]*|title[:\s]*)', '', line, flags=re.IGNORECASE)
-        
-        # Remove leading/trailing quotes and whitespace
-        line = line.strip().strip('"').strip("'").strip()
-        
-        # Remove invalid filename characters for titles
-        line = re.sub(r'[<>:"/\\|?*]', '', line)
-        
-        # Take first sentence if multiple
-        if '. ' in line:
-            line = line.split('. ')[0] + '.'
-        
-        return line if len(line) > 3 else None
+    def generate_text(self, prompt: str, max_tokens: int = 500, temperature: float = 0.7) -> Optional[str]:
+        """Generate text using enhanced chat API with thinking."""
+        messages = [{'role': 'user', 'content': prompt}]
+        return self._chat_with_thinking(messages, None, max_tokens, temperature)
     
-    def _fallback_extraction(self, raw_response: str) -> Optional[str]:
-        """Fallback extraction method for difficult responses."""
-        
-        # Try to find any meaningful content
-        lines = raw_response.split('\n')
-        
-        # Look for the shortest meaningful line (likely to be a title/answer)
-        candidates = []
-        for line in lines:
-            line = line.strip()
-            if (line and 3 <= len(line) <= 100 and 
-                not line.startswith(('<', '>', '#', '```', '---')) and
-                not any(phrase in line.lower() for phrase in [
-                    'think', 'okay', 'let me', 'the user', 'i need', 'hmm'
-                ])):
-                candidates.append(line)
-        
-        if candidates:
-            # Return the shortest candidate (likely to be most direct)
-            best = min(candidates, key=len)
-            return self._clean_response_line(best)
-        
-        # Absolute fallback - return first 50 chars
-        cleaned = re.sub(r'^[<>]*\s*', '', raw_response)
-        return cleaned[:50].strip() if cleaned else None
+    def generate_structured_response(self, prompt: str, 
+                                   response_format: BaseModel,
+                                   max_tokens: int = 500, 
+                                   temperature: float = 0.7) -> Optional[BaseModel]:
+        """Generate structured response using Pydantic models."""
+        messages = [{'role': 'user', 'content': prompt}]
+        return self._chat_with_thinking(messages, response_format, max_tokens, temperature)
 
 
 class ObsidianWriter:
@@ -219,7 +210,7 @@ class ObsidianWriter:
             logger.error(f"Error creating Audio Notes directory: {e}")
             raise
         
-        # Initialize Ollama client with error handling and resource management
+        # Initialize Ollama client with enhanced error handling and resource management
         if use_ai_enhancement:
             try:
                 self.ollama_client = OllamaClient()
@@ -228,14 +219,14 @@ class ObsidianWriter:
                     self.use_ai_enhancement = False
                     self.ollama_client = None
                 else:
-                    logger.info("Ollama client initialized successfully")
+                    logger.info("Enhanced Ollama client initialized successfully")
             except Exception as e:
                 logger.warning(f"Failed to initialize Ollama client: {e}. AI enhancement disabled.")
                 self.use_ai_enhancement = False
                 self.ollama_client = None
         
     def enhance_title(self, transcription: str, original_filename: str = "") -> str:
-        """Generate an intelligent title for the note using Qwen 3:0.6B."""
+        """Generate an intelligent title using structured outputs."""
         if not self.use_ai_enhancement or not self.ollama_client:
             # Fallback: use filename or timestamp
             if original_filename:
@@ -245,94 +236,165 @@ class ObsidianWriter:
         # Extract first few sentences for context
         preview = transcription[:200] + "..." if len(transcription) > 200 else transcription
         
-        # More direct prompt
-        prompt = f"""Content: {preview}
+        # Enhanced prompt for structured output
+        prompt = f"""Analyze this audio transcription and create a concise, descriptive title.
 
-Task: Create a title (max 8 words)
-Title:"""
+Content: {preview}
+
+Requirements:
+- Maximum 8 words
+- Descriptive and specific to the content
+- Suitable as a filename (no special characters)
+- Focus on the main topic or purpose"""
         
-        enhanced_title = self.ollama_client.generate_text(prompt, max_tokens=20, temperature=0.2)
-        
-        if enhanced_title and len(enhanced_title.strip()) > 2:
-            # Clean and validate the title
-            enhanced_title = re.sub(r'[<>:"/\\|?*]', '', enhanced_title)  # Remove invalid filename chars
-            enhanced_title = enhanced_title.strip().strip('"').strip("'")
+        try:
+            # Try structured response first
+            response = self.ollama_client.generate_structured_response(
+                prompt, TitleResponse, max_tokens=100, temperature=0.2
+            )
             
-            # Remove common prefixes
-            enhanced_title = re.sub(r'^(title[:\s]*|answer[:\s]*)', '', enhanced_title, flags=re.IGNORECASE)
+            if response and isinstance(response, TitleResponse):
+                title = response.title.strip()
+                # Clean and validate the title
+                title = re.sub(r'[<>:"/\\|?*]', '', title)
+                title = title.strip().strip('"').strip("'")
+                
+                if len(title) > 3 and len(title) <= 100:
+                    logger.debug(f"Generated structured title: {title}")
+                    return title
             
-            if len(enhanced_title) > 100:  # Reasonable length limit
-                enhanced_title = enhanced_title[:100]
+            # Fallback to unstructured generation
+            enhanced_title = self.ollama_client.generate_text(
+                f"Create a short title (max 8 words) for: {preview}", 
+                max_tokens=20, temperature=0.2
+            )
             
-            # Ensure we have a meaningful title
-            if len(enhanced_title.strip()) > 2:
-                return enhanced_title.strip()
+            if enhanced_title and len(enhanced_title.strip()) > 2:
+                # Clean and validate the title
+                enhanced_title = re.sub(r'[<>:"/\\|?*]', '', enhanced_title)
+                enhanced_title = enhanced_title.strip().strip('"').strip("'")
+                enhanced_title = re.sub(r'^(title[:\s]*|answer[:\s]*)', '', enhanced_title, flags=re.IGNORECASE)
+                
+                if len(enhanced_title.strip()) > 2:
+                    return enhanced_title.strip()
+                    
+        except Exception as e:
+            logger.debug(f"Title generation failed: {e}")
         
         # Fallback if AI enhancement fails
         return f"Audio Note - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
     
     def generate_tags(self, transcription: str) -> List[str]:
-        """Generate relevant tags for the note using Qwen 3:0.6B."""
+        """Generate relevant tags using structured outputs."""
         if not self.use_ai_enhancement or not self.ollama_client:
             return ["audio-note", "transcription"]
         
         # Use first 300 characters for tag generation
         content_preview = transcription[:300] + "..." if len(transcription) > 300 else transcription
         
-        # More direct prompt
-        prompt = f"""Content: {content_preview}
+        prompt = f"""Analyze this audio transcription and generate relevant tags.
 
-Task: List 3-5 tags (lowercase, hyphens only)
-Tags:"""
+Content: {content_preview}
+
+Requirements:
+- 3-5 tags maximum
+- Lowercase with hyphens only
+- Relevant to the content topics
+- Useful for organization and search"""
         
-        tags_response = self.ollama_client.generate_text(prompt, max_tokens=30, temperature=0.3)
-        
-        if tags_response:
-            # Parse and clean tags - handle various formats
-            tags_text = tags_response.lower().strip()
+        try:
+            # Try structured response first
+            response = self.ollama_client.generate_structured_response(
+                prompt, TagsResponse, max_tokens=100, temperature=0.3
+            )
             
-            # Remove common prefixes
-            tags_text = re.sub(r'^(tags[:\s]*|answer[:\s]*)', '', tags_text, flags=re.IGNORECASE)
+            if response and isinstance(response, TagsResponse):
+                tags = []
+                for tag in response.tags:
+                    # Clean and validate tags
+                    clean_tag = re.sub(r'[^a-z0-9\-]', '', tag.lower().strip())
+                    if 1 < len(clean_tag) < 30:
+                        tags.append(clean_tag)
+                
+                if tags:
+                    # Ensure we have basic tags
+                    if "audio-note" not in tags:
+                        tags.append("audio-note")
+                    logger.debug(f"Generated structured tags: {tags}")
+                    return tags[:5]  # Limit to 5 tags
             
-            # Split by various delimiters
-            tags = re.split(r'[,\s\n]+', tags_text)
-            tags = [re.sub(r'[^a-z0-9\-]', '', tag.strip()) for tag in tags if tag.strip()]
-            tags = [tag for tag in tags if len(tag) > 1 and len(tag) < 30]  # Reasonable length
+            # Fallback to unstructured generation
+            tags_response = self.ollama_client.generate_text(
+                f"List 3-5 relevant tags (lowercase, hyphens only) for: {content_preview}",
+                max_tokens=30, temperature=0.3
+            )
             
-            # Ensure we have at least some basic tags
-            if tags and len(tags) <= 5:
-                return tags + ["audio-note"] if "audio-note" not in tags else tags
+            if tags_response:
+                # Parse and clean tags
+                tags_text = tags_response.lower().strip()
+                tags_text = re.sub(r'^(tags[:\s]*|answer[:\s]*)', '', tags_text, flags=re.IGNORECASE)
+                tags = re.split(r'[,\s\n]+', tags_text)
+                tags = [re.sub(r'[^a-z0-9\-]', '', tag.strip()) for tag in tags if tag.strip()]
+                tags = [tag for tag in tags if 1 < len(tag) < 30]
+                
+                if tags and len(tags) <= 5:
+                    return tags + ["audio-note"] if "audio-note" not in tags else tags
+                    
+        except Exception as e:
+            logger.debug(f"Tag generation failed: {e}")
         
         return ["audio-note", "transcription"]
     
     def enhance_content(self, transcription: str) -> str:
-        """Enhance the transcription content with better formatting and structure."""
+        """Enhance content using structured outputs."""
         if not self.use_ai_enhancement or not self.ollama_client:
             return transcription
         
         # For content enhancement, use a smaller chunk to avoid truncation
         content_chunk = transcription[:800] if len(transcription) > 800 else transcription
         
-        prompt = f"""Fix grammar and format this text with proper paragraphs:
+        prompt = f"""Improve this audio transcription by fixing grammar, formatting, and structure.
 
-{content_chunk}
+Original text: {content_chunk}
 
-Improved text:"""
+Requirements:
+- Fix grammar and spelling errors
+- Add proper paragraph breaks
+- Improve readability
+- Maintain original meaning and content
+- Keep the same length approximately"""
         
-        enhanced_content = self.ollama_client.generate_text(
-            prompt, 
-            max_tokens=min(len(content_chunk.split()) * 2, 1000),  # Allow for expansion but limit
-            temperature=0.2
-        )
-        
-        if enhanced_content and len(enhanced_content.strip()) > len(content_chunk) * 0.3:
-            # Only use enhanced content if it seems reasonable (not truncated too much)
-            return enhanced_content
+        try:
+            # Try structured response first
+            response = self.ollama_client.generate_structured_response(
+                prompt, ContentEnhancement, 
+                max_tokens=min(len(content_chunk.split()) * 2, 1000), 
+                temperature=0.2
+            )
+            
+            if response and isinstance(response, ContentEnhancement):
+                enhanced = response.enhanced_content.strip()
+                if len(enhanced) > len(content_chunk) * 0.3:  # Reasonable length check
+                    logger.debug(f"Enhanced content using structured output")
+                    return enhanced
+            
+            # Fallback to unstructured generation
+            enhanced_content = self.ollama_client.generate_text(
+                f"Fix grammar and format this text with proper paragraphs:\n\n{content_chunk}\n\nImproved text:",
+                max_tokens=min(len(content_chunk.split()) * 2, 1000),
+                temperature=0.2
+            )
+            
+            if enhanced_content and len(enhanced_content.strip()) > len(content_chunk) * 0.3:
+                return enhanced_content
+                
+        except Exception as e:
+            logger.debug(f"Content enhancement failed: {e}")
         
         return transcription
     
     def generate_summary(self, transcription: str) -> str:
-        """Generate a brief summary of the transcription."""
+        """Generate a summary using structured outputs."""
         if not self.use_ai_enhancement or not self.ollama_client:
             # Simple fallback summary
             words = transcription.split()
@@ -343,20 +405,43 @@ Improved text:"""
         # Use first 500 chars for summary
         content_preview = transcription[:500] + "..." if len(transcription) > 500 else transcription
         
-        prompt = f"""Content: {content_preview}
+        prompt = f"""Create a concise summary of this audio transcription.
 
-Task: Write a 1-sentence summary
-Summary:"""
+Content: {content_preview}
+
+Requirements:
+- 1-2 sentences maximum
+- Capture the main topic and key points
+- Be specific and informative"""
         
-        summary = self.ollama_client.generate_text(prompt, max_tokens=50, temperature=0.3)
-        
-        if summary and len(summary.strip()) > 10:
-            # Clean the summary
-            summary = re.sub(r'^(summary[:\s]*|answer[:\s]*)', '', summary, flags=re.IGNORECASE)
-            summary = summary.strip().strip('"').strip("'")
+        try:
+            # Try structured response first
+            response = self.ollama_client.generate_structured_response(
+                prompt, SummaryResponse, max_tokens=100, temperature=0.3
+            )
             
-            if len(summary.strip()) > 10:
-                return summary.strip()
+            if response and isinstance(response, SummaryResponse):
+                summary = response.summary.strip()
+                if len(summary) > 10:
+                    logger.debug(f"Generated structured summary")
+                    return summary
+            
+            # Fallback to unstructured generation
+            summary = self.ollama_client.generate_text(
+                f"Write a 1-sentence summary of: {content_preview}",
+                max_tokens=50, temperature=0.3
+            )
+            
+            if summary and len(summary.strip()) > 10:
+                # Clean the summary
+                summary = re.sub(r'^(summary[:\s]*|answer[:\s]*)', '', summary, flags=re.IGNORECASE)
+                summary = summary.strip().strip('"').strip("'")
+                
+                if len(summary.strip()) > 10:
+                    return summary.strip()
+                    
+        except Exception as e:
+            logger.debug(f"Summary generation failed: {e}")
         
         # Fallback
         words = transcription.split()

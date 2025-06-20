@@ -26,16 +26,19 @@ def test_ollama_responses():
     direct = client.generate_text('What is 2+2? Answer with just the number.')
     print(f'Direct response: {repr(direct)}')
     
-    print('\n=== Testing Raw Response ===')
-    # Test without the "Give a direct answer" prefix
+    print('\n=== Testing Raw Response (Updated to use modern chat API) ===')
+    # Updated to use modern ollama.chat() API for consistency
     import ollama
     try:
-        raw_response = ollama.generate(
+        raw_response = ollama.chat(
             model="qwen3:0.6b",
-            prompt="Create a title for: machine learning discussion",
+            messages=[
+                {'role': 'user', 'content': 'Create a title for: machine learning discussion'}
+            ],
             options={"temperature": 0.3, "num_predict": 50}
         )
-        print(f'Raw ollama response: {repr(raw_response.get("response", ""))}')
+        response_content = raw_response.get('message', {}).get('content', '')
+        print(f'Raw ollama response: {repr(response_content)}')
     except Exception as e:
         print(f'Raw ollama error: {e}')
 
