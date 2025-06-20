@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import time
+import random
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -47,12 +48,84 @@ class ContentEnhancement(BaseModel):
 class OllamaClient:
     """Enhanced client for interacting with Ollama API using latest features."""
     
-    def __init__(self, model: str = "qwen3:0.6b"):
+    def __init__(self, model: str = "qwen3:0.6b", max_retries: int = 3, base_delay: float = 1.0):
         self.model = model
+        self.max_retries = max_retries
+        self.base_delay = base_delay
         self._connection_pool = {}  # Simple connection pooling
         self._last_availability_check = None
         self._availability_cache_timeout = 30  # seconds
+        self._error_count = 0
+        self._circuit_breaker_threshold = 5
+        self._circuit_breaker_reset_time = 300  # 5 minutes
+        self._circuit_breaker_last_failure = None
         
+    def _is_circuit_breaker_open(self) -> bool:
+        """Check if circuit breaker is open (preventing requests)."""
+        if self._error_count < self._circuit_breaker_threshold:
+            return False
+        
+        if self._circuit_breaker_last_failure is None:
+            return False
+        
+        # Check if enough time has passed to reset the circuit breaker
+        current_time = time.time()
+        if current_time - self._circuit_breaker_last_failure > self._circuit_breaker_reset_time:
+            self._error_count = 0
+            self._circuit_breaker_last_failure = None
+            logger.info("Circuit breaker reset after timeout")
+            return False
+        
+        return True
+    
+    def _record_success(self):
+        """Record a successful operation."""
+        if self._error_count > 0:
+            self._error_count = max(0, self._error_count - 1)
+            logger.debug(f"Error count decreased to {self._error_count}")
+    
+    def _record_failure(self):
+        """Record a failed operation."""
+        self._error_count += 1
+        self._circuit_breaker_last_failure = time.time()
+        logger.debug(f"Error count increased to {self._error_count}")
+        
+        if self._error_count >= self._circuit_breaker_threshold:
+            logger.warning(f"Circuit breaker opened after {self._error_count} failures")
+    
+    def _retry_with_backoff(self, operation, *args, **kwargs):
+        """Execute operation with exponential backoff retry."""
+        if self._is_circuit_breaker_open():
+            logger.warning("Circuit breaker is open, skipping request")
+            return None
+        
+        last_exception = None
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                result = operation(*args, **kwargs)
+                self._record_success()
+                return result
+                
+            except Exception as e:
+                last_exception = e
+                self._record_failure()
+                
+                # Don't retry on certain types of errors
+                if isinstance(e, (ValueError, TypeError)):
+                    logger.error(f"Non-retryable error: {e}")
+                    break
+                
+                if attempt < self.max_retries:
+                    # Calculate delay with exponential backoff and jitter
+                    delay = self.base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    logger.debug(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.2f}s...")
+                    time.sleep(delay)
+                else:
+                    logger.error(f"All {self.max_retries + 1} attempts failed. Last error: {e}")
+        
+        return None
+
     def is_available(self) -> bool:
         """Check if Ollama service is available with caching."""
         current_time = datetime.now().timestamp()
@@ -62,12 +135,20 @@ class OllamaClient:
             current_time - self._last_availability_check < self._availability_cache_timeout):
             return hasattr(self, '_cached_availability') and self._cached_availability
         
+        def _check_availability():
+            return ollama.list()
+        
         try:
             # Try to list models to check if Ollama is running
-            models = ollama.list()
-            self._cached_availability = True
-            self._last_availability_check = current_time
-            return True
+            models = self._retry_with_backoff(_check_availability)
+            if models is not None:
+                self._cached_availability = True
+                self._last_availability_check = current_time
+                return True
+            else:
+                self._cached_availability = False
+                self._last_availability_check = current_time
+                return False
         except Exception as e:
             logger.debug(f"Ollama availability check failed: {e}")
             self._cached_availability = False
@@ -82,52 +163,50 @@ class OllamaClient:
         if not self.is_available():
             logger.warning("Ollama service is not available")
             return None
-            
-        try:
-            # Add thinking control message for better reasoning
-            enhanced_messages = [
-                {'role': 'control', 'content': 'thinking'},
-                *messages
-            ]
-            
-            # Prepare chat options
-            chat_options = {
-                'model': self.model,
-                'messages': enhanced_messages,
-                'options': {
-                    'temperature': temperature,
-                    'num_predict': max_tokens,
-                }
+        
+        # Add thinking control message for better reasoning
+        enhanced_messages = [
+            {'role': 'control', 'content': 'thinking'},
+            *messages
+        ]
+        
+        # Prepare chat options
+        chat_options = {
+            'model': self.model,
+            'messages': enhanced_messages,
+            'options': {
+                'temperature': temperature,
+                'num_predict': max_tokens,
             }
-            
-            # Add structured output format if provided
-            if response_format:
-                chat_options['format'] = response_format.model_json_schema()
-            
-            # Make the chat request
-            response = ollama.chat(**chat_options)
-            
-            if not response or not response.get('message', {}).get('content'):
-                logger.warning("Empty response from Ollama")
-                return None
-            
-            content = response['message']['content'].strip()
-            
-            # Parse structured response if format was specified
-            if response_format:
-                try:
-                    return response_format.model_validate_json(content)
-                except Exception as e:
-                    logger.warning(f"Failed to parse structured response: {e}")
-                    # Fallback to extracting useful content from raw response
-                    return self._extract_from_thinking_response(content)
-            
-            # For unstructured responses, extract useful content
-            return self._extract_from_thinking_response(content)
-            
-        except Exception as e:
-            logger.error(f"Error communicating with Ollama: {e}")
+        }
+        
+        # Add structured output format if provided
+        if response_format:
+            chat_options['format'] = response_format.model_json_schema()
+        
+        def _make_chat_request():
+            return ollama.chat(**chat_options)
+        
+        # Make the chat request with retry mechanism
+        response = self._retry_with_backoff(_make_chat_request)
+        
+        if not response or not response.get('message', {}).get('content'):
+            logger.warning("Empty response from Ollama")
             return None
+        
+        content = response['message']['content'].strip()
+        
+        # Parse structured response if format was specified
+        if response_format:
+            try:
+                return response_format.model_validate_json(content)
+            except Exception as e:
+                logger.warning(f"Failed to parse structured response: {e}")
+                # Fallback to extracting useful content from raw response
+                return self._extract_from_thinking_response(content)
+        
+        # For unstructured responses, extract useful content
+        return self._extract_from_thinking_response(content)
     
     def _extract_from_thinking_response(self, content: str) -> Optional[str]:
         """Extract useful content from thinking-enabled responses."""

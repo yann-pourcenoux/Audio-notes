@@ -522,7 +522,7 @@
             "id": 13.2,
             "title": "Verify Error Handling and Edge Cases",
             "description": "Ensure comprehensive error handling for ollama package operations, including network failures, model unavailability, and timeout scenarios.",
-            "status": "pending"
+            "status": "in-progress"
           },
           {
             "id": 13.3,
