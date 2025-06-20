@@ -474,30 +474,40 @@
         ]
       },
       {
-        "id": 11,
-        "title": "Implement Batch Processing Feature",
-        "description": "Add functionality to process multiple audio files in a batch.",
-        "details": "Extend the CLI to accept a directory of audio files and process them sequentially. Ensure that each file is transcribed and integrated into Obsidian as a separate note. Optimize performance for handling large batches.",
-        "testStrategy": "Test batch processing with a directory of audio files and verify that each file is processed correctly and efficiently.",
-        "priority": "low",
-        "dependencies": [
-          9
-        ],
-        "status": "pending",
-        "subtasks": []
-      },
-      {
         "id": 12,
         "title": "Develop Config File for Persistent Settings",
-        "description": "Implement a configuration file to store persistent user settings.",
-        "details": "Use a format like JSON or YAML to store user preferences such as default vault path and model selection. Implement functionality to read from and write to this config file. Ensure the CLI can override config settings if needed.",
-        "testStrategy": "Test the config file by setting different preferences and verifying that they are applied correctly during tool execution.",
+        "description": "Implement a configuration file system to store and manage persistent user settings, utilizing Pydantic for validation and integrating with the command-line interface (CLI).",
+        "status": "done",
+        "dependencies": [],
         "priority": "low",
-        "dependencies": [
-          11
-        ],
-        "status": "pending",
-        "subtasks": []
+        "details": "Develop a configuration module using Pydantic's BaseSettings to define and validate user preferences, including default vault path, model selection, and other settings. Implement functionality to read from and write to a JSON configuration file located at ~/.audio-notes/config.json. Ensure the CLI can override configuration settings when specified, with CLI arguments taking precedence over config file values. Provide commands for viewing, setting, resetting, and displaying the configuration file location.",
+        "testStrategy": "Test the configuration system by setting various preferences through the CLI and verifying that they are correctly applied during tool execution. Ensure that CLI overrides function as expected and that the configuration file persists settings across sessions. Validate error handling for invalid values and test the reset functionality for individual keys and full reset scenarios.",
+        "subtasks": [
+          {
+            "id": 12.1,
+            "title": "Implement Configuration Module with Pydantic",
+            "description": "Develop a configuration module using Pydantic's BaseSettings to define and validate user preferences, including default vault path, model selection, and other settings.",
+            "status": "done"
+          },
+          {
+            "id": 12.2,
+            "title": "Implement Configuration File Operations",
+            "description": "Implement functionality to read from and write to a JSON configuration file located at ~/.audio-notes/config.json, ensuring settings are persisted across sessions.",
+            "status": "done"
+          },
+          {
+            "id": 12.3,
+            "title": "Integrate CLI with Configuration System",
+            "description": "Ensure the CLI can override configuration settings when specified, with CLI arguments taking precedence over config file values. Provide commands for viewing, setting, resetting, and displaying the configuration file location.",
+            "status": "done"
+          },
+          {
+            "id": 12.4,
+            "title": "Test Configuration System Functionality",
+            "description": "Test the configuration system by setting various preferences through the CLI and verifying that they are correctly applied during tool execution. Ensure that CLI overrides function as expected and that the configuration file persists settings across sessions. Validate error handling for invalid values and test the reset functionality for individual keys and full reset scenarios.",
+            "status": "done"
+          }
+        ]
       },
       {
         "id": 13,
@@ -509,7 +519,7 @@
           7,
           9
         ],
-        "status": "in-progress",
+        "status": "done",
         "testStrategy": "Review all ollama package usage, test edge cases, verify error handling, and ensure consistent implementation patterns across the codebase.",
         "subtasks": [
           {
@@ -534,22 +544,16 @@
           },
           {
             "id": 13.4,
-            "title": "Optimize Ollama Package Performance",
-            "description": "Review and optimize ollama package usage for better performance, including connection pooling and request optimization.",
-            "status": "pending"
-          },
-          {
-            "id": 13.5,
             "title": "Update Tests for Ollama Package Coverage",
             "description": "Ensure comprehensive test coverage for all ollama package functionality and edge cases.",
-            "status": "pending"
+            "status": "done"
           }
         ]
       }
     ],
     "metadata": {
       "created": "2025-06-16T18:56:53.466Z",
-      "updated": "2025-06-19T20:55:05.036Z",
+      "updated": "2025-06-20T11:52:15.693Z",
       "description": "Tasks for master context"
     }
   }

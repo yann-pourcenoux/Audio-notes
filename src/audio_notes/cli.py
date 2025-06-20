@@ -22,6 +22,7 @@ from datetime import datetime
 from .audio_processor import AudioProcessor
 from .whisper_transcriber import WhisperTranscriber
 from .obsidian_writer import ObsidianWriter, OllamaClient
+from .config import get_config_manager, get_config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -129,35 +130,27 @@ def cli(ctx, verbose):
 @click.argument('audio_files', nargs=-1, type=click.Path(exists=True), required=True)
 @click.option('--language', '-l', 
               type=click.Choice(list(WHISPER_LANGUAGES.keys()) + ['auto']),
-              default='auto',
               help='Language of the audio (auto for automatic detection)')
 @click.option('--task', '-t',
               type=click.Choice(['transcribe', 'translate']),
-              default='transcribe',
               help='Task to perform: transcribe or translate to English')
 @click.option('--timestamps', '--ts',
               type=click.Choice(TIMESTAMP_LEVELS),
-              default='none',
               help='Timestamp level: none, sentence, or word')
 @click.option('--precision', '-p',
               type=click.Choice(PRECISION_OPTIONS),
-              default='float32',
               help='Model precision: float16 (GPU) or float32 (CPU)')
 @click.option('--temperature', '--temp',
               type=float,
-              default=0.0,
               help='Temperature for decoding (0.0-1.0)')
 @click.option('--beam-size', '--beams',
               type=int,
-              default=5,
               help='Number of beams for beam search decoding')
 @click.option('--processing-method', '--method',
               type=click.Choice(PROCESSING_METHODS),
-              default='sequential',
               help='Processing method for long-form audio')
 @click.option('--output-format', '--format',
               type=click.Choice(OUTPUT_FORMATS),
-              default='text',
               help='Output format')
 @click.option('--output-dir', '--out',
               type=click.Path(),
@@ -169,13 +162,11 @@ def cli(ctx, verbose):
               help='Skip Obsidian vault integration')
 @click.option('--batch-size', '--batch',
               type=int,
-              default=1,
               help='Batch size for processing multiple files')
 @click.option('--max-length', '--max',
               type=int,
-              default=30,
               help='Maximum length in seconds for chunked processing')
-@click.option('--enhance-notes', '--enhance', is_flag=True, default=True,
+@click.option('--enhance-notes', '--enhance', is_flag=True,
               help='Use AI to enhance notes with titles and summaries')
 @click.option('--dry-run', is_flag=True,
               help='Show what would be processed without actually processing')
@@ -193,6 +184,44 @@ def process(ctx, audio_files, language, task, timestamps, precision, temperature
         audio-notes process interview.m4a --timestamps sentence --enhance
     """
     verbose = ctx.obj.get('verbose', False)
+    
+    # Load configuration and merge with CLI arguments
+    config_manager = get_config_manager()
+    cli_args = {
+        'language': language,
+        'task': task,
+        'timestamps': timestamps,
+        'precision': precision,
+        'temperature': temperature,
+        'beam_size': beam_size,
+        'processing_method': processing_method,
+        'output_format': output_format,
+        'output_dir': output_dir,
+        'vault_path': vault_path,
+        'batch_size': batch_size,
+        'max_length': max_length,
+        'enhance_notes': enhance_notes,
+        'verbose': verbose
+    }
+    
+    # Merge configuration with CLI args (CLI args take precedence)
+    merged_config = config_manager.merge_with_cli_args(cli_args)
+    
+    # Extract values from merged config
+    language = merged_config['language']
+    task = merged_config['task']
+    timestamps = merged_config['timestamps']
+    precision = merged_config['precision']
+    temperature = merged_config['temperature']
+    beam_size = merged_config['beam_size']
+    processing_method = merged_config['processing_method']
+    output_format = merged_config['output_format']
+    output_dir = merged_config['output_dir']
+    vault_path = merged_config['vault_path']
+    batch_size = merged_config['batch_size']
+    max_length = merged_config['max_length']
+    enhance_notes = merged_config['enhance_notes']
+    verbose = merged_config['verbose']
     
     # Convert audio_files tuple to list
     audio_file_list = list(audio_files)
@@ -514,7 +543,13 @@ def quick_note(audio_file, vault_path):
     
     click.echo(f"🚀 Quick processing: {os.path.basename(audio_file)}")
     
+    # Load configuration and merge with CLI arguments
+    config_manager = get_config_manager()
+    cli_args = {'vault_path': vault_path}
+    merged_config = config_manager.merge_with_cli_args(cli_args)
+    
     # Set up vault path
+    vault_path = merged_config.get('vault_path')
     if vault_path:
         vault_path = Path(vault_path)
     else:
@@ -554,6 +589,103 @@ def quick_note(audio_file, vault_path):
     except Exception as e:
         click.echo(f"❌ Quick note failed: {e}", err=True)
         sys.exit(1)
+
+@cli.group()
+def config():
+    """Manage configuration settings"""
+    pass
+
+@config.command('set')
+@click.argument('key')
+@click.argument('value')
+def config_set(key, value):
+    """Set a configuration value
+    
+    KEY: Configuration key (e.g., language, vault_path, precision)
+    VALUE: Value to set
+    
+    Examples:
+        audio-notes config set language en
+        audio-notes config set vault_path ~/Documents/MyVault
+        audio-notes config set enhance_notes true
+    """
+    config_manager = get_config_manager()
+    
+    # Convert string values to appropriate types
+    if value.lower() in ['true', 'false']:
+        value = value.lower() == 'true'
+    elif value.isdigit():
+        value = int(value)
+    elif value.replace('.', '').isdigit():
+        value = float(value)
+    
+    success = config_manager.set(key, value)
+    if success:
+        click.echo(f"✅ Set {key} = {value}")
+    else:
+        click.echo(f"❌ Failed to set {key}. Check the key name and value format.")
+
+@config.command('get')
+@click.argument('key', required=False)
+def config_get(key):
+    """Get configuration value(s)
+    
+    KEY: Configuration key to get (optional, shows all if not provided)
+    
+    Examples:
+        audio-notes config get language
+        audio-notes config get
+    """
+    config_manager = get_config_manager()
+    
+    if key:
+        value = config_manager.get(key)
+        if value is not None:
+            click.echo(f"{key}: {value}")
+        else:
+            click.echo(f"❌ Configuration key '{key}' not found")
+    else:
+        # Show all configuration
+        config_dict = config_manager.list_all()
+        click.echo("📋 Current Configuration:")
+        click.echo("=" * 40)
+        for k, v in config_dict.items():
+            click.echo(f"{k}: {v}")
+
+@config.command('reset')
+@click.argument('key', required=False)
+@click.option('--all', is_flag=True, help='Reset all configuration to defaults')
+def config_reset(key, all):
+    """Reset configuration to defaults
+    
+    KEY: Specific key to reset (optional)
+    
+    Examples:
+        audio-notes config reset language
+        audio-notes config reset --all
+    """
+    config_manager = get_config_manager()
+    
+    if all:
+        success = config_manager.reset()
+        if success:
+            click.echo("✅ Reset all configuration to defaults")
+        else:
+            click.echo("❌ Failed to reset configuration")
+    elif key:
+        success = config_manager.reset(key)
+        if success:
+            click.echo(f"✅ Reset {key} to default")
+        else:
+            click.echo(f"❌ Failed to reset {key}")
+    else:
+        click.echo("❌ Please specify a key to reset or use --all flag")
+
+@config.command('path')
+def config_path():
+    """Show configuration file path"""
+    config_manager = get_config_manager()
+    click.echo(f"📁 Configuration file: {config_manager.config_path}")
 
 @cli.command()
 @click.option('--check-whisper', is_flag=True, help='Check Whisper model availability')
