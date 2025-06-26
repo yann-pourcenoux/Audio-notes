@@ -1,0 +1,322 @@
+name: Performance & Benchmarks
+
+on:
+  schedule:
+    # Run weekly on Sundays at 6 AM UTC
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'src/audio_notes/**'
+      - 'pyproject.toml'
+    types: [opened, synchronize]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  benchmark:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        uv tool install pytest-benchmark
+        
+    - name: Create test audio files
+      run: |
+        python -c "
+        import numpy as np
+        import soundfile as sf
+        
+        # Create test audio files of different sizes
+        sample_rate = 16000
+        
+        # 10 second file
+        duration_10s = 10.0
+        frequency = 440.0
+        t = np.linspace(0, duration_10s, int(sample_rate * duration_10s), False)
+        audio_10s = 0.3 * np.sin(frequency * 2 * np.pi * t)
+        sf.write('benchmark_10s.wav', audio_10s, sample_rate)
+        
+        # 30 second file
+        duration_30s = 30.0
+        t = np.linspace(0, duration_30s, int(sample_rate * duration_30s), False)
+        audio_30s = 0.3 * np.sin(frequency * 2 * np.pi * t)
+        sf.write('benchmark_30s.wav', audio_30s, sample_rate)
+        
+        # 60 second file
+        duration_60s = 60.0
+        t = np.linspace(0, duration_60s, int(sample_rate * duration_60s), False)
+        audio_60s = 0.3 * np.sin(frequency * 2 * np.pi * t)
+        sf.write('benchmark_60s.wav', audio_60s, sample_rate)
+        
+        print('Created benchmark audio files')
+        "
+        
+    - name: Run audio processing benchmarks
+      run: |
+        python -c "
+        import time
+        import sys
+        import os
+        sys.path.insert(0, 'src')
+        from audio_notes.audio_processor import AudioProcessor
+        from audio_notes.whisper_transcriber import WhisperTranscriber
+        
+        # Initialize components
+        processor = AudioProcessor()
+        
+        # Benchmark audio loading and processing
+        files = ['benchmark_10s.wav', 'benchmark_30s.wav', 'benchmark_60s.wav']
+        results = {}
+        
+        for file in files:
+            if os.path.exists(file):
+                print(f'Benchmarking {file}...')
+                
+                # Time audio loading
+                start = time.time()
+                audio_data, sample_rate = processor.load_audio(file)
+                load_time = time.time() - start
+                
+                # Time audio processing
+                start = time.time()
+                processed = processor.process_audio(file)
+                process_time = time.time() - start
+                
+                results[file] = {
+                    'load_time': load_time,
+                    'process_time': process_time,
+                    'total_time': load_time + process_time,
+                    'audio_duration': processed.get('duration', 0),
+                    'real_time_factor': processed.get('duration', 0) / (load_time + process_time) if (load_time + process_time) > 0 else 0
+                }
+                
+                print(f'  Load time: {load_time:.3f}s')
+                print(f'  Process time: {process_time:.3f}s')
+                print(f'  Real-time factor: {results[file][\"real_time_factor\"]:.2f}x')
+        
+        # Save results
+        import json
+        with open('benchmark_results.json', 'w') as f:
+            json.dump(results, f, indent=2)
+        "
+        
+    - name: Memory usage analysis
+      run: |
+        python -c "
+        import psutil
+        import os
+        import sys
+        import time
+        sys.path.insert(0, 'src')
+        from audio_notes.audio_processor import AudioProcessor
+        
+        def get_memory_usage():
+            process = psutil.Process(os.getpid())
+            return process.memory_info().rss / 1024 / 1024  # MB
+        
+        processor = AudioProcessor()
+        
+        print('Memory usage analysis:')
+        print(f'Baseline memory: {get_memory_usage():.1f} MB')
+        
+        # Process files and monitor memory
+        if os.path.exists('benchmark_60s.wav'):
+            mem_before = get_memory_usage()
+            processed = processor.process_audio('benchmark_60s.wav')
+            mem_after = get_memory_usage()
+            
+            print(f'Memory after processing 60s file: {mem_after:.1f} MB')
+            print(f'Memory increase: {mem_after - mem_before:.1f} MB')
+        "
+        
+    - name: Generate performance report
+      run: |
+        python -c "
+        import json
+        import os
+        
+        if os.path.exists('benchmark_results.json'):
+            with open('benchmark_results.json', 'r') as f:
+                results = json.load(f)
+            
+            # Generate markdown report
+            report = ['# Performance Benchmark Report\n']
+            report.append(f'**Generated:** {os.environ.get(\"GITHUB_RUN_ID\", \"local\")}')
+            report.append(f'**Branch:** {os.environ.get(\"GITHUB_REF_NAME\", \"unknown\")}')
+            report.append('')
+            report.append('## Audio Processing Performance')
+            report.append('')
+            report.append('| File | Duration | Load Time | Process Time | Total Time | Real-time Factor |')
+            report.append('|------|----------|-----------|--------------|------------|------------------|')
+            
+            for file, data in results.items():
+                duration = data.get('audio_duration', 0)
+                load_time = data.get('load_time', 0)
+                process_time = data.get('process_time', 0)
+                total_time = data.get('total_time', 0)
+                rtf = data.get('real_time_factor', 0)
+                
+                report.append(f'| {file} | {duration:.1f}s | {load_time:.3f}s | {process_time:.3f}s | {total_time:.3f}s | {rtf:.2f}x |')
+            
+            report.append('')
+            report.append('## Performance Guidelines')
+            report.append('- Real-time factor > 1.0x indicates faster than real-time processing')
+            report.append('- Load time should be minimal compared to processing time')
+            report.append('- Memory usage should remain stable across different file sizes')
+            
+            with open('performance_report.md', 'w') as f:
+                f.write('\n'.join(report))
+        "
+        
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: |
+          benchmark_results.json
+          performance_report.md
+        retention-days: 30
+        
+    - name: Comment performance results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          if (fs.existsSync('performance_report.md')) {
+            const report = fs.readFileSync('performance_report.md', 'utf8');
+            
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## 🚀 Performance Benchmark Results\n\n' + report
+            });
+          }
+
+  stress-test:
+    name: Stress Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        
+    - name: Create large test file
+      run: |
+        python -c "
+        import numpy as np
+        import soundfile as sf
+        
+        # Create a 5-minute test file
+        sample_rate = 16000
+        duration = 300.0  # 5 minutes
+        frequency = 440.0
+        t = np.linspace(0, duration, int(sample_rate * duration), False)
+        audio = 0.3 * np.sin(frequency * 2 * np.pi * t)
+        sf.write('stress_test_5min.wav', audio, sample_rate)
+        print(f'Created {duration/60:.1f} minute test file')
+        "
+        
+    - name: Run stress test
+      run: |
+        python -c "
+        import time
+        import sys
+        import psutil
+        import os
+        sys.path.insert(0, 'src')
+        from audio_notes.audio_processor import AudioProcessor
+        
+        def monitor_resources():
+            process = psutil.Process(os.getpid())
+            return {
+                'memory_mb': process.memory_info().rss / 1024 / 1024,
+                'cpu_percent': process.cpu_percent()
+            }
+        
+        processor = AudioProcessor()
+        
+        print('Starting stress test...')
+        start_time = time.time()
+        start_resources = monitor_resources()
+        
+        # Process the large file
+        if os.path.exists('stress_test_5min.wav'):
+            try:
+                result = processor.process_audio('stress_test_5min.wav')
+                success = True
+                print(f'Successfully processed 5-minute file')
+            except Exception as e:
+                success = False
+                print(f'Failed to process file: {e}')
+        
+        end_time = time.time()
+        end_resources = monitor_resources()
+        
+        processing_time = end_time - start_time
+        memory_delta = end_resources['memory_mb'] - start_resources['memory_mb']
+        
+        print(f'Processing time: {processing_time:.2f}s')
+        print(f'Memory usage change: {memory_delta:.1f} MB')
+        print(f'Peak memory: {end_resources[\"memory_mb\"]:.1f} MB')
+        print(f'Success: {success}')
+        
+        # Save stress test results
+        stress_results = {
+            'processing_time': processing_time,
+            'memory_delta_mb': memory_delta,
+            'peak_memory_mb': end_resources['memory_mb'],
+            'success': success,
+            'file_duration': 300.0
+        }
+        
+        import json
+        with open('stress_test_results.json', 'w') as f:
+            json.dump(stress_results, f, indent=2)
+        "
+        
+    - name: Upload stress test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: stress-test-results
+        path: stress_test_results.json
+        retention-days: 30

@@ -1,0 +1,243 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION_DEFAULT: "3.12"
+
+jobs:
+  lint:
+    name: Code Quality & Linting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        
+    - name: Run Black (code formatting check)
+      run: |
+        uv run black --check --diff src/ tests/
+        
+    - name: Run isort (import sorting check)
+      run: |
+        uv run isort --check-only --diff src/ tests/
+        
+    - name: Run Flake8 (linting)
+      run: |
+        uv run flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+        
+    - name: Run MyPy (type checking)
+      run: |
+        uv run mypy src/audio_notes/ --ignore-missing-imports --follow-imports=silent
+
+  test:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.12", "3.13"]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        
+    - name: Create test audio files (if missing)
+      run: |
+        python -c "
+        import numpy as np
+        import soundfile as sf
+        import os
+        
+        if not os.path.exists('test_audio.wav'):
+            # Create a simple test audio file (1 second of 440Hz tone)
+            sample_rate = 16000
+            duration = 1.0
+            frequency = 440.0
+            t = np.linspace(0, duration, int(sample_rate * duration), False)
+            audio = 0.3 * np.sin(frequency * 2 * np.pi * t)
+            sf.write('test_audio.wav', audio, sample_rate)
+            print('Created test_audio.wav')
+        "
+        
+    - name: Run unit tests
+      run: |
+        uv run pytest tests/unit/ -v --tb=short
+        
+    - name: Run config tests
+      run: |
+        uv run pytest tests/config/ -v --tb=short
+        
+    - name: Run integration tests (non-Ollama)
+      run: |
+        uv run pytest tests/integration/ -v --tb=short -m "not ollama"
+        
+    - name: Run error handling tests
+      run: |
+        uv run pytest tests/error_handling/ -v --tb=short
+        
+    - name: Run workflow tests
+      run: |
+        uv run pytest tests/workflow/ -v --tb=short
+
+  test-ollama:
+    name: Ollama Integration Tests
+    runs-on: ubuntu-latest
+    # Only run on main branch and PRs to main to avoid unnecessary CI load
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        
+    - name: Start Ollama service
+      run: |
+        # Install Ollama
+        curl -fsSL https://ollama.ai/install.sh | sh
+        # Start Ollama in background
+        ollama serve &
+        sleep 10
+        # Pull a small model for testing
+        ollama pull qwen2.5:0.5b
+        
+    - name: Create test audio files
+      run: |
+        python -c "
+        import numpy as np
+        import soundfile as sf
+        
+        # Create a simple test audio file
+        sample_rate = 16000
+        duration = 1.0
+        frequency = 440.0
+        t = np.linspace(0, duration, int(sample_rate * duration), False)
+        audio = 0.3 * np.sin(frequency * 2 * np.pi * t)
+        sf.write('test_audio.wav', audio, sample_rate)
+        "
+        
+    - name: Run Ollama integration tests
+      run: |
+        uv run pytest tests/ollama/ -v --tb=short -m "ollama"
+      env:
+        OLLAMA_MODEL: "qwen2.5:0.5b"
+
+  build:
+    name: Build Package
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Install build dependencies
+      run: |
+        uv tool install build
+        
+    - name: Build package
+      run: |
+        uv tool run build
+        
+    - name: Check package
+      run: |
+        uv tool install twine
+        uv tool run twine check dist/*
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-packages
+        path: dist/
+        retention-days: 7
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION_DEFAULT }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        
+    - name: Run safety check
+      run: |
+        uv tool install safety
+        uv tool run safety check --json || true
+        
+    - name: Run bandit security scan
+      run: |
+        uv tool install bandit
+        uv tool run bandit -r src/ -f json || true

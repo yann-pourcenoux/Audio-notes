@@ -1,0 +1,219 @@
+name: CD (Release & Deploy)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish to PyPI'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+        - 'true'
+        - 'false'
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  validate-release:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+        
+    - name: Install dependencies
+      run: |
+        uv sync --all-extras --dev
+        
+    - name: Validate version consistency
+      run: |
+        # Get version from pyproject.toml
+        PROJECT_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        echo "Project version: $PROJECT_VERSION"
+        
+        # Get tag version (if release event)
+        if [ "${{ github.event_name }}" = "release" ]; then
+          TAG_VERSION="${{ github.event.release.tag_name }}"
+          TAG_VERSION=${TAG_VERSION#v}  # Remove 'v' prefix if present
+          echo "Tag version: $TAG_VERSION"
+          
+          if [ "$PROJECT_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: Version mismatch between pyproject.toml ($PROJECT_VERSION) and git tag ($TAG_VERSION)"
+            exit 1
+          fi
+        fi
+        
+    - name: Run quality checks
+      run: |
+        uv run black --check src/ tests/
+        uv run isort --check-only src/ tests/
+        uv run flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+        
+    - name: Run critical tests
+      run: |
+        uv run pytest tests/unit/ tests/config/ tests/integration/ -x --tb=short -m "not (ollama or slow)"
+
+  build-and-test:
+    name: Build & Test Package
+    runs-on: ${{ matrix.os }}
+    needs: validate-release
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Build package
+      run: |
+        uv tool install build
+        uv tool run build
+        
+    - name: Test package installation
+      run: |
+        # Create a temporary virtual environment
+        python -m venv test_env
+        
+        # Activate and install built package
+        if [ "$RUNNER_OS" = "Windows" ]; then
+          test_env\\Scripts\\activate.bat
+          pip install dist/*.whl
+        else
+          source test_env/bin/activate
+          pip install dist/*.whl
+        fi
+        
+        # Test CLI entry point
+        audio-notes --version || audio-notes --help
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist-${{ matrix.os }}
+        path: dist/
+        retention-days: 30
+
+  publish-test-pypi:
+    name: Publish to Test PyPI
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
+    environment: test-pypi
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Build package
+      run: |
+        uv tool install build
+        uv tool run build
+        
+    - name: Publish to Test PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        repository-url: https://test.pypi.org/legacy/
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        
+    - name: Test installation from Test PyPI
+      run: |
+        sleep 30  # Wait for package to be available
+        python -m venv test_install
+        source test_install/bin/activate
+        pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ audio-notes
+        audio-notes --version || audio-notes --help
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-and-test, publish-test-pypi]
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.publish == 'true')
+    environment: pypi
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: Build package
+      run: |
+        uv tool install build
+        uv tool run build
+        
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+  create-github-release-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    if: github.event_name == 'release'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+        
+    - name: Prepare release assets
+      run: |
+        mkdir -p release_assets
+        
+        # Copy wheel and source distribution from ubuntu build
+        cp artifacts/dist-ubuntu-latest/*.whl release_assets/
+        cp artifacts/dist-ubuntu-latest/*.tar.gz release_assets/
+        
+        # Create checksums
+        cd release_assets
+        sha256sum * > checksums.txt
+        
+    - name: Upload release assets
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release_assets/*
+        generate_release_notes: true
